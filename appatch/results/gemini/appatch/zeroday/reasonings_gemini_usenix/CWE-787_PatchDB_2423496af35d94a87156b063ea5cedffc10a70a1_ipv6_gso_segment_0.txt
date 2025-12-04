@@ -1,0 +1,22 @@
+## Reasoning for Patch: CWE-787 in ipv6_gso_segment
+
+Here's a breakdown of the vulnerability and the reasoning behind the patch:
+
+**Step 1: Root Cause Analysis:**
+
+1. **Uncontrolled Return Value:** The function `ip6_find_1stfragopt(skb, &prevhdr)` is used to find the length of the first fragment header. However, the return value `unfrag_ip6hlen` is not checked for potential errors. If `ip6_find_1stfragopt` encounters an error, it could return a negative value.
+
+2. **Pointer Arithmetic and Out-of-Bounds Access:** The value of `unfrag_ip6hlen` is directly used in pointer arithmetic to calculate the address of `fptr`: `fptr = (frag_hdr *)((u8 *)ipv6h + unfrag_ip6hlen)`.  If `unfrag_ip6hlen` is negative, this calculation results in accessing memory *before* the start of the `ipv6h` buffer, leading to an out-of-bounds read.
+
+**Step 2: Fixing Strategy:**
+
+1. **Validate Return Value:** The patch introduces a check for a negative return value from `ip6_find_1stfragopt`: `if (unfrag_ip6hlen < 0)`. This ensures that the subsequent pointer arithmetic only occurs if `unfrag_ip6hlen` is non-negative.
+
+2. **Error Handling:**  If `unfrag_ip6hlen` is negative, the patch returns an error using `ERR_PTR(unfrag_ip6hlen)`. This propagates the error up the call stack, preventing the out-of-bounds access and allowing higher-level functions to handle the error appropriately.
+
+**Conclusion:**
+
+The vulnerability arises from the unchecked use of the return value from `ip6_find_1stfragopt`. This lack of validation can lead to out-of-bounds memory access when calculating the `fptr` address. The patch addresses this by:
+
+- **Validating:**  Ensuring `unfrag_ip6hlen` is non-negative before using it in pointer arithmetic.
+- **Error Handling:**  Returning an error if `ip6_find_1stfragopt` returns a negative value, preventing further processing and potential crashes. 

@@ -1,0 +1,185 @@
+Here are five possible code completions for the given function, addressing the CWE-125 vulnerability (out-of-bounds read) and following best practices:
+
+1. Completion 1:
+```c
+GLOBAL(djpeg_dest_ptr)
+jinit_write_bmp(j_decompress_ptr cinfo, boolean is_os2,
+                boolean use_inversion_array)
+{
+  bmp_dest_ptr dest;
+  JDIMENSION row_width;
+
+  /* Allocate the destination object */
+  dest = (bmp_dest_ptr)
+    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+                                sizeof(bmp_dest_struct));
+  
+  /* Calculate row width with bounds checking */
+  row_width = cinfo->output_width * cinfo->output_components;
+  if (row_width > UINT32_MAX / sizeof(JSAMPLE)) {
+    ERREXIT(cinfo, JERR_BAD_WRITE_PARAMS);
+  }
+
+  /* Set up function pointers */
+  dest->pub.start_output = start_output_bmp;
+  dest->pub.finish_output = finish_output_bmp;
+
+  dest->cinfo = cinfo;
+  dest->is_os2 = is_os2;
+  dest->use_inversion_array = use_inversion_array;
+
+  return (djpeg_dest_ptr) dest;
+}
+```
+
+2. Completion 2:
+```c
+GLOBAL(djpeg_dest_ptr)
+jinit_write_bmp(j_decompress_ptr cinfo, boolean is_os2,
+                boolean use_inversion_array)
+{
+  bmp_dest_ptr dest;
+  JDIMENSION row_width;
+
+  /* Allocate and initialize destination object */
+  dest = (bmp_dest_ptr)
+    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+                                sizeof(bmp_dest_struct));
+  if (dest == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+  }
+
+  /* Compute row width with overflow check */
+  if (cinfo->output_width > (JDIMENSION)(UINT32_MAX / cinfo->output_components)) {
+    ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+  }
+  row_width = cinfo->output_width * cinfo->output_components;
+
+  dest->pub.start_output = start_output_bmp;
+  dest->pub.finish_output = finish_output_bmp;
+  dest->cinfo = cinfo;
+  dest->is_os2 = is_os2;
+  dest->use_inversion_array = use_inversion_array;
+  dest->row_width = row_width;
+
+  return (djpeg_dest_ptr) dest;
+}
+```
+
+3. Completion 3:
+```c
+GLOBAL(djpeg_dest_ptr)
+jinit_write_bmp(j_decompress_ptr cinfo, boolean is_os2,
+                boolean use_inversion_array)
+{
+  bmp_dest_ptr dest;
+  JDIMENSION row_width;
+
+  /* Allocate the destination object */
+  dest = (bmp_dest_ptr)
+    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+                                sizeof(bmp_dest_struct));
+  
+  /* Ensure valid output dimensions */
+  if (cinfo->output_width == 0 || cinfo->output_height == 0) {
+    ERREXIT(cinfo, JERR_BAD_IMAGE_SIZE);
+  }
+
+  /* Calculate row width safely */
+  row_width = cinfo->output_width * cinfo->output_components;
+  if (row_width / cinfo->output_components != cinfo->output_width) {
+    ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+  }
+
+  dest->pub.start_output = start_output_bmp;
+  dest->pub.finish_output = finish_output_bmp;
+  dest->cinfo = cinfo;
+  dest->is_os2 = is_os2;
+  dest->use_inversion_array = use_inversion_array;
+  dest->row_width = row_width;
+
+  return (djpeg_dest_ptr) dest;
+}
+```
+
+4. Completion 4:
+```c
+GLOBAL(djpeg_dest_ptr)
+jinit_write_bmp(j_decompress_ptr cinfo, boolean is_os2,
+                boolean use_inversion_array)
+{
+  bmp_dest_ptr dest;
+  JDIMENSION row_width;
+
+  /* Allocate and initialize destination object */
+  dest = (bmp_dest_ptr)
+    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+                                sizeof(bmp_dest_struct));
+  if (dest == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+  }
+
+  /* Check for potential integer overflow in row_width calculation */
+  if (cinfo->output_width > (JDIMENSION)(SIZE_MAX / cinfo->output_components)) {
+    ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+  }
+  row_width = cinfo->output_width * cinfo->output_components;
+
+  dest->pub.start_output = start_output_bmp;
+  dest->pub.finish_output = finish_output_bmp;
+  dest->cinfo = cinfo;
+  dest->is_os2 = is_os2;
+  dest->use_inversion_array = use_inversion_array;
+  dest->row_width = row_width;
+
+  /* Initialize other necessary fields */
+  dest->data_offset = 0;
+  dest->iobuffer = NULL;
+  dest->row_buffer = NULL;
+
+  return (djpeg_dest_ptr) dest;
+}
+```
+
+5. Completion 5:
+```c
+GLOBAL(djpeg_dest_ptr)
+jinit_write_bmp(j_decompress_ptr cinfo, boolean is_os2,
+                boolean use_inversion_array)
+{
+  bmp_dest_ptr dest;
+  JDIMENSION row_width;
+
+  /* Allocate the destination object */
+  dest = (bmp_dest_ptr)
+    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
+                                sizeof(bmp_dest_struct));
+  if (dest == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+  }
+
+  /* Validate output dimensions */
+  if (cinfo->output_width == 0 || cinfo->output_height == 0 ||
+      cinfo->output_components == 0) {
+    ERREXIT(cinfo, JERR_BAD_IMAGE_SIZE);
+  }
+
+  /* Calculate row width with overflow protection */
+  if (cinfo->output_width > (JDIMENSION)(UINT32_MAX / cinfo->output_components)) {
+    ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+  }
+  row_width = cinfo->output_width * cinfo->output_components;
+
+  /* Initialize the destination object */
+  dest->pub.start_output = start_output_bmp;
+  dest->pub.finish_output = finish_output_bmp;
+  dest->cinfo = cinfo;
+  dest->is_os2 = is_os2;
+  dest->use_inversion_array = use_inversion_array;
+  dest->row_width = row_width;
+
+  return (djpeg_dest_ptr) dest;
+}
+```
+
+These completions address the CWE-125 vulnerability by adding checks for potential integer overflows and validating input parameters. They also include proper error handling and memory allocation checks.

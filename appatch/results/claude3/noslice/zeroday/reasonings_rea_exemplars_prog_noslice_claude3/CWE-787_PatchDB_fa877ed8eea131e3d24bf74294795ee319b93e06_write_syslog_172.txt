@@ -1,0 +1,9 @@
+With the summary of the `pg_mbcliplen` function, we can better understand the root cause of the CWE-787 (Out-of-bounds Write) vulnerability.
+
+The `pg_mbcliplen` function is used to calculate the length of the clipped string, up to the specified `limit` (which is `l` in this case). However, the function returns the character length, not the byte length of the string.
+
+The issue arises when the calculated `buflen` is used to access the `buf` array and write a null terminator at `buf[buflen]`. Since `buflen` represents the character length and not the byte length, it may exceed the size of the `buf` array, which is `PG_SYSLOG_LIMIT + 1` bytes.
+
+If `buflen` is greater than or equal to `PG_SYSLOG_LIMIT + 1`, writing a null terminator at `buf[buflen]` will result in an out-of-bounds write, leading to a buffer overflow vulnerability (CWE-787).
+
+To mitigate this vulnerability, the code should ensure that `buflen` is always within the bounds of the `buf` array before writing the null terminator. One possible solution could be to use the byte length of the string instead of the character length, or to introduce additional checks to ensure that `buflen` does not exceed the size of the `buf` array.

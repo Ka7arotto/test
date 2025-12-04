@@ -1,0 +1,114 @@
+Certainly! To provide code completions that address the CWE-787 vulnerability (Out-of-bounds Write), I'll need a bit more context about the specific programming language and the nature of the code. However, I'll assume we're dealing with C/C++ since buffer overflow issues are common in these languages. Here are five possible ways to mitigate or fix an out-of-bounds write vulnerability in different scenarios:
+
+### Example 1: Safe Array Access
+```c
+#include <stdio.h>
+#define MAX_SIZE 100
+
+int main() {
+    int array[MAX_SIZE];
+    int index, value;
+
+    printf("Enter index and value: ");
+    scanf("%d %d", &index, &value);
+
+    if (index >= 0 && index < MAX_SIZE) {
+        array[index] = value;
+        printf("Value set successfully.\n");
+    } else {
+        printf("Index out of bounds error.\n");
+    }
+
+    return 0;
+}
+```
+
+### Example 2: Using `std::vector` with Bounds Checking in C++
+```cpp
+#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<int> vec(100);
+    int index, value;
+
+    std::cout << "Enter index and value: ";
+    std::cin >> index >> value;
+
+    if (index >= 0 && index < vec.size()) {
+        vec[index] = value;
+        std::cout << "Value set successfully.\n";
+    } else {
+        std::cout << "Index out of bounds error.\n";
+    }
+
+    return 0;
+}
+```
+
+### Example 3: Using `memcpy` with Size Check
+```c
+#include <stdio.h>
+#include <string.h>
+
+void safeCopy(char *dest, size_t destSize, const char *src, size_t numBytes) {
+    if (numBytes <= destSize) {
+        memcpy(dest, src, numBytes);
+        printf("Copy successful.\n");
+    } else {
+        printf("Attempt to copy too much data.\n");
+    }
+}
+
+int main() {
+    char buffer[100];
+    char data[] = "Sample data";
+    safeCopy(buffer, sizeof(buffer), data, sizeof(data));
+    return 0;
+}
+```
+
+### Example 4: Bounds Checking in a Function
+```c
+#include <stdio.h>
+
+void setArrayValue(int *array, int size, int index, int value) {
+    if (index >= 0 && index < size) {
+        array[index] = value;
+        printf("Value set successfully.\n");
+    } else {
+        printf("Index out of bounds error.\n");
+    }
+}
+
+int main() {
+    int myArray[100];
+    setArrayValue(myArray, 100, 50, 12345);
+    return 0;
+}
+```
+
+### Example 5: Using `std::array` with `.at()` in C++
+```cpp
+#include <iostream>
+#include <array>
+
+int main() {
+    std::array<int, 100> arr;
+    int index, value;
+
+    std::cout << "Enter index and value: ";
+    std::cin >> index >> value;
+
+    try {
+        arr.at(index) = value;
+        std::cout << "Value set successfully.\n";
+    } catch (const std::out_of_range& e) {
+        std::cout << "Index out of bounds error: " << e.what() << '\n';
+    }
+
+    return 0;
+}
+```
+
+Each of these examples includes some form of bounds checking or uses a method that inherently checks bounds (like `std::vector::at()` or `std::array::at()` in C++), which helps prevent out-of-bounds write vulnerabilities.

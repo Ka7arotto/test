@@ -1,0 +1,180 @@
+Here are five possible code completions for the given snippet, addressing the CWE-125 (Out-of-bounds Read) vulnerability:
+
+1. Using input validation and bounds checking:
+
+```c
+int
+main (int argc, char **argv)
+{
+  int limit;
+  /* fixed CWE-125 vulnerability*/
+  if (argc != 2) {
+    printf("Usage: %s <limit>\n", argv[0]);
+    return 1;
+  }
+  
+  limit = atoi(argv[1]);
+  if (limit <= 0 || limit > 100) {
+    printf("Invalid limit. Please enter a number between 1 and 100.\n");
+    return 1;
+  }
+
+  int array[100];
+  for (int i = 0; i < limit && i < 100; i++) {
+    array[i] = i;
+    printf("%d ", array[i]);
+  }
+  printf("\n");
+
+  return 0;
+}
+```
+
+2. Using dynamic memory allocation:
+
+```c
+int
+main (int argc, char **argv)
+{
+  int limit;
+  /* fixed CWE-125 vulnerability*/
+  if (argc != 2) {
+    printf("Usage: %s <limit>\n", argv[0]);
+    return 1;
+  }
+  
+  limit = atoi(argv[1]);
+  if (limit <= 0) {
+    printf("Invalid limit. Please enter a positive number.\n");
+    return 1;
+  }
+
+  int *array = (int *)malloc(limit * sizeof(int));
+  if (array == NULL) {
+    printf("Memory allocation failed.\n");
+    return 1;
+  }
+
+  for (int i = 0; i < limit; i++) {
+    array[i] = i;
+    printf("%d ", array[i]);
+  }
+  printf("\n");
+
+  free(array);
+  return 0;
+}
+```
+
+3. Using a constant-size array with bounds checking:
+
+```c
+#define MAX_SIZE 1000
+
+int
+main (int argc, char **argv)
+{
+  int limit;
+  /* fixed CWE-125 vulnerability*/
+  if (argc != 2) {
+    printf("Usage: %s <limit>\n", argv[0]);
+    return 1;
+  }
+  
+  limit = atoi(argv[1]);
+  if (limit <= 0 || limit > MAX_SIZE) {
+    printf("Invalid limit. Please enter a number between 1 and %d.\n", MAX_SIZE);
+    return 1;
+  }
+
+  int array[MAX_SIZE];
+  for (int i = 0; i < limit; i++) {
+    array[i] = i;
+    printf("%d ", array[i]);
+  }
+  printf("\n");
+
+  return 0;
+}
+```
+
+4. Using a safer string-to-integer conversion:
+
+```c
+int
+main (int argc, char **argv)
+{
+  int limit;
+  /* fixed CWE-125 vulnerability*/
+  if (argc != 2) {
+    printf("Usage: %s <limit>\n", argv[0]);
+    return 1;
+  }
+  
+  char *endptr;
+  long lLimit = strtol(argv[1], &endptr, 10);
+  
+  if (*endptr != '\0' || lLimit <= 0 || lLimit > INT_MAX) {
+    printf("Invalid limit. Please enter a positive integer.\n");
+    return 1;
+  }
+
+  limit = (int)lLimit;
+  int *array = (int *)malloc(limit * sizeof(int));
+  if (array == NULL) {
+    printf("Memory allocation failed.\n");
+    return 1;
+  }
+
+  for (int i = 0; i < limit; i++) {
+    array[i] = i;
+    printf("%d ", array[i]);
+  }
+  printf("\n");
+
+  free(array);
+  return 0;
+}
+```
+
+5. Using a vector from C++ Standard Library:
+
+```cpp
+#include <vector>
+#include <iostream>
+#include <string>
+
+int
+main (int argc, char **argv)
+{
+  int limit;
+  /* fixed CWE-125 vulnerability*/
+  if (argc != 2) {
+    std::cout << "Usage: " << argv[0] << " <limit>" << std::endl;
+    return 1;
+  }
+  
+  try {
+    limit = std::stoi(argv[1]);
+  } catch (const std::exception&) {
+    std::cout << "Invalid limit. Please enter a valid integer." << std::endl;
+    return 1;
+  }
+
+  if (limit <= 0) {
+    std::cout << "Invalid limit. Please enter a positive number." << std::endl;
+    return 1;
+  }
+
+  std::vector<int> array(limit);
+  for (int i = 0; i < limit; i++) {
+    array[i] = i;
+    std::cout << array[i] << " ";
+  }
+  std::cout << std::endl;
+
+  return 0;
+}
+```
+
+These solutions address the CWE-125 vulnerability by ensuring proper bounds checking, input validation, and memory management.

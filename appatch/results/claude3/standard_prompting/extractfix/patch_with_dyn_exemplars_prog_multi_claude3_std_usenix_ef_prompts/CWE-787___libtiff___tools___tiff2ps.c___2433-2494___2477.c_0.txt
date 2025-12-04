@@ -1,0 +1,32 @@
+
+
+
+Q: Given the following code slice:
+```
+1 static int get_bitmap_file(struct mddev *mddev, void __user * arg)
+3 	mdu_bitmap_file_t *file = NULL; /* too big for stack allocation */
+7 	file = kmalloc(sizeof(*file), GFP_NOIO);```
+which has a CWE-787 vulnerability at line:
+```
+7 	file = kmalloc(sizeof(*file), GFP_NOIO);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability in the given code is CWE-787 (Out-of-bounds Write), which means that the program is writing data past the boundaries of the allocated buffer. In this case, the vulnerability is caused by the use of `kmalloc` without properly initializing the allocated memory.
+
+When `kmalloc` is used to allocate memory, the allocated memory is not initialized, which means that it may contain arbitrary data left over from previous allocations. If the uninitialized memory is used without proper checks or initialization, it can lead to undefined behavior and potentially exploitable vulnerabilities.
+
+Step 2. Fixing Strategy: To fix this vulnerability, the allocated memory should be properly initialized before use. One way to achieve this is to use `kzalloc` instead of `kmalloc`. `kzalloc` is a kernel function that allocates memory and initializes it with zeros.
+
+By replacing `kmalloc` with `kzalloc`, the allocated memory will be initialized with zeros, ensuring that there is no leftover data from previous allocations. This eliminates the potential for out-of-bounds writes and other undefined behavior caused by uninitialized memory.
+
+Therefore, the patch should be:
+
+```
+<       file = kmalloc(sizeof(*file), GFP_NOIO);
+---
+>       file = kzalloc(sizeof(*file), GFP_NOIO);
+```
+
+This change ensures that the allocated memory for `file` is properly initialized with zeros, mitigating the CWE-787 vulnerability.

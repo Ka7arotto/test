@@ -1,0 +1,87 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+2 {
+3     const uint8_t *frame_start = frame;
+4     const uint8_t *frame_end   = frame + width * height;
+5     int mask = 0x10000, bitbuf = 0;
+6     int i, v, offset, count, segments;
+7 
+8     segments = bytestream2_get_le16(gb);
+9     while (segments--) {
+10         if (bytestream2_get_bytes_left(gb) < 2)
+11             return AVERROR_INVALIDDATA;
+12         if (mask == 0x10000) {
+13             bitbuf = bytestream2_get_le16u(gb);
+14             mask = 1;
+15         }
+16 
+17         if (bitbuf & mask) {
+18             v = bytestream2_get_le16(gb);
+19             offset = (v & 0x1FFF) << 2;
+20             count = ((v >> 13) + 2) << 1;
+21             if (frame - frame_start < offset || frame_end - frame < count*2 + width)
+22                 return AVERROR_INVALIDDATA;
+23             for (i = 0; i < count; i++) {
+24                 frame[0] = frame[1] =
+25                 frame[width] = frame[width + 1] = frame[-offset];
+26 
+27                 frame += 2;
+28             }
+29         } else if (bitbuf & (mask << 1)) {
+30             v = bytestream2_get_le16(gb)*2;
+31             if (frame - frame_end < v)
+32                 return AVERROR_INVALIDDATA;
+33             frame += v;
+34         } else {
+35             if (frame_end - frame < width + 3)
+36                 return AVERROR_INVALIDDATA;
+37             frame[0] = frame[1] =
+38             frame[width] = frame[width + 1] =  bytestream2_get_byte(gb);
+39             frame += 2;
+40             frame[0] = frame[1] =
+41             frame[width] = frame[width + 1] =  bytestream2_get_byte(gb);
+42             frame += 2;
+43         }
+44         mask <<= 2;
+45     }
+46 
+47     return 0;
+48 }
+```
+which has a CWE-787 vulnerability at line:
+```
+35             if (frame_end - frame < width + 3)
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

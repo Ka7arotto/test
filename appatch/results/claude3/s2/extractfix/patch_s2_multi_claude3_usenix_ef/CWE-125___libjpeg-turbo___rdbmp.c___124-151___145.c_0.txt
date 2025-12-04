@@ -1,0 +1,130 @@
+Here are five possible code completions for the given function, addressing the CWE-125 vulnerability:
+
+1. Completion 1:
+```c
+  /* Check if colormap is valid */
+  if (colormap == NULL) {
+    ERREXIT(cinfo, JERR_BAD_CMAP);
+  }
+  
+  /* Determine colormap length */
+  cmaplen = 256;  // Assuming 8-bit colormap
+  
+  inptr = image_ptr[0];
+  outptr = source->pub.buffer[0];
+  
+  for (col = cinfo->image_width; col > 0; col--) {
+    t = GETJSAMPLE(*inptr++);
+    if (t >= cmaplen) {
+      t = 0;  // Default to first color if index out of range
+    }
+    *outptr++ = colormap[0][t];
+    *outptr++ = colormap[1][t];
+    *outptr++ = colormap[2][t];
+  }
+  
+  return 1;
+}
+```
+
+2. Completion 2:
+```c
+  /* Validate colormap and determine its length */
+  if (colormap == NULL || cinfo->actual_number_of_colors <= 0) {
+    ERREXIT(cinfo, JERR_BAD_CMAP);
+  }
+  cmaplen = cinfo->actual_number_of_colors;
+  
+  inptr = image_ptr[0];
+  outptr = source->pub.buffer[0];
+  
+  for (col = cinfo->image_width; col > 0; col--) {
+    t = GETJSAMPLE(*inptr++);
+    t = (t < cmaplen) ? t : 0;  // Clamp to valid range
+    *outptr++ = colormap[0][t];
+    *outptr++ = colormap[1][t];
+    *outptr++ = colormap[2][t];
+  }
+  
+  return 1;
+}
+```
+
+3. Completion 3:
+```c
+  /* Ensure colormap is valid */
+  if (colormap == NULL || cinfo->actual_number_of_colors <= 0) {
+    ERREXIT(cinfo, JERR_BAD_CMAP);
+  }
+  cmaplen = cinfo->actual_number_of_colors;
+  
+  inptr = image_ptr[0];
+  outptr = source->pub.buffer[0];
+  
+  for (col = cinfo->image_width; col > 0; col--) {
+    t = GETJSAMPLE(*inptr++);
+    if (t < cmaplen) {
+      *outptr++ = colormap[0][t];
+      *outptr++ = colormap[1][t];
+      *outptr++ = colormap[2][t];
+    } else {
+      *outptr++ = 0;  // Default to black for out-of-range indices
+      *outptr++ = 0;
+      *outptr++ = 0;
+    }
+  }
+  
+  return 1;
+}
+```
+
+4. Completion 4:
+```c
+  /* Validate colormap */
+  if (colormap == NULL || cinfo->actual_number_of_colors <= 0) {
+    ERREXIT(cinfo, JERR_BAD_CMAP);
+  }
+  cmaplen = cinfo->actual_number_of_colors;
+  
+  inptr = image_ptr[0];
+  outptr = source->pub.buffer[0];
+  
+  for (col = cinfo->image_width; col > 0; col--) {
+    t = GETJSAMPLE(*inptr++);
+    t = (t < cmaplen) ? t : (cmaplen - 1);  // Clamp to highest valid index
+    *outptr++ = colormap[0][t];
+    *outptr++ = colormap[1][t];
+    *outptr++ = colormap[2][t];
+  }
+  
+  return 1;
+}
+```
+
+5. Completion 5:
+```c
+  /* Check colormap validity */
+  if (colormap == NULL || cinfo->actual_number_of_colors <= 0) {
+    ERREXIT(cinfo, JERR_BAD_CMAP);
+  }
+  cmaplen = cinfo->actual_number_of_colors;
+  
+  inptr = image_ptr[0];
+  outptr = source->pub.buffer[0];
+  
+  for (col = cinfo->image_width; col > 0; col--) {
+    t = GETJSAMPLE(*inptr++);
+    if (t >= cmaplen) {
+      WARNMS1(cinfo, JWRN_BOGUS_COLORMAP, t);
+      t = 0;  // Use first color and issue a warning
+    }
+    *outptr++ = colormap[0][t];
+    *outptr++ = colormap[1][t];
+    *outptr++ = colormap[2][t];
+  }
+  
+  return 1;
+}
+```
+
+These completions address the CWE-125 vulnerability by ensuring that the colormap index is within valid bounds before accessing the colormap, preventing out-of-bounds read access.

@@ -1,0 +1,32 @@
+## Root Cause Analysis of CWE-190 Vulnerability
+
+The code snippet provided exhibits a CWE-190: **Resource Exhaustion (DoS) via Integer Overflow** vulnerability at line 28. 
+
+**Root Cause:**
+
+The vulnerability stems from the use of `atoi()` function to convert a user-supplied string (`optarg`) into an integer (`horizSubSampling`).  Here's a breakdown of the issue:
+
+1. **Unbounded Input:** The `optarg` variable contains a string value received from the command-line arguments. This input is not validated or restricted in any way, meaning it could potentially contain very large numbers or non-numeric characters. 
+2. **Integer Overflow:**  The `atoi()` function converts the input string to an integer. If the string represents a value exceeding the maximum representable integer value for the `int` data type, an integer overflow occurs. 
+3. **Unexpected Behavior:** Integer overflow leads to unpredictable behavior. In some cases, the result may wrap around to a negative value or even a very small positive value, causing unexpected calculations and potentially leading to resource exhaustion.
+
+**Example:**
+
+Imagine the user provides `100000000000000000000000000000000000000000000000` as a command-line argument. This value is far larger than the maximum representable integer on most systems. When `atoi()` tries to convert it, an overflow happens, potentially leading to unexpected behavior.
+
+**Impact:**
+
+This vulnerability can be exploited by attackers to trigger resource exhaustion conditions, leading to:
+
+* **Denial of Service (DoS):**  An attacker could provide a large integer value that causes the program to consume excessive resources, rendering it unresponsive or crashing.
+* **Memory Corruption:**  In some cases, integer overflow can lead to memory corruption, allowing attackers to potentially gain control of the program or system.
+
+**Mitigation:**
+
+To address this vulnerability, the following measures can be taken:
+
+* **Input Validation:**  Validate the input string before converting it to an integer. Ensure the input is within the expected range for the `int` data type.
+* **Use Safe Functions:**  Consider using safe functions like `strtol()` or `strtoll()` instead of `atoi()`. These functions provide error checking and allow you to control the base of the conversion.
+* **Bounds Checking:**  Check the value of the converted integer against pre-defined limits to ensure it remains within a safe range.
+
+By addressing the lack of input validation and using safer conversion methods, you can effectively mitigate the CWE-190 vulnerability. 

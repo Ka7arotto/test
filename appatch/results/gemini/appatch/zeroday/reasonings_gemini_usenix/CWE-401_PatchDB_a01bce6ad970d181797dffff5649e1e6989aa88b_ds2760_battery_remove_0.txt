@@ -1,0 +1,34 @@
+## Reasoning for the Patch (CWE-401: Memory Leak)
+
+Here's a breakdown of the reasoning behind the patch for the memory leak vulnerability:
+
+**Step 1: Root Cause Analysis**
+
+* **Dynamic Allocation:**  The code likely uses `kmalloc` or a similar function to allocate memory for the `ds2760_device_info` structure pointed to by `di`. This is a common pattern in Linux device drivers. 
+* **No Corresponding Free:** The original code carefully cleans up resources: it cancels work items, destroys the workqueue, and unregisters the power supply. However, it crucially **omits freeing the memory allocated for `di` itself**. This results in a memory leak.
+
+**Step 2: Fixing Strategy**
+
+The solution is straightforward:
+
+1. **Free `di`:**  The patch adds the line `kfree(di);` after `power_supply_unregister(&di->bat);`. This explicitly frees the memory allocated for the `ds2760_device_info` structure.
+
+**Why This Matters:**
+
+* **Resource Exhaustion:**  Memory leaks, even small ones, can accumulate over time, especially in long-running systems like device drivers. This can lead to resource exhaustion, where the system runs out of available memory, causing performance degradation or even crashes.
+* **Security Implications:** In some cases, unfreed memory might contain sensitive information from previous operations. Although not directly exploitable in this specific scenario, attackers could potentially leverage memory leaks to gain insights into the system's internal state. 
+
+**The Complete Patched Code:**
+
+```c
+static int ds2760_battery_remove(struct platform_device *pdev)
+{
+    struct ds2760_device_info *di = platform_get_drvdata(pdev);
+    cancel_rearming_delayed_workqueue(di->monitor_wqueue, &di->monitor_work);
+    cancel_rearming_delayed_workqueue(di->monitor_wqueue, &di->set_charged_work);
+    destroy_workqueue(di->monitor_wqueue);
+    power_supply_unregister(&di->bat);
+    kfree(di); // <--- Patch: Free the allocated 'di' structure 
+    return 0;
+}
+```

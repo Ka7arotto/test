@@ -1,0 +1,32 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate Memory Allocation:
+  - The code allocates memory for a `CAPI_KEY` struct using `OPENSSL_malloc`.
+  - However, it does not check if the memory allocation was successful.
+
+- 2: Potential Vulnerability:
+  - If the memory allocation fails, `key` will be `NULL`.
+  - The code then attempts to assign a value to `key->keyspec` without checking if `key` is `NULL`.
+  - This will result in a null pointer dereference, leading to undefined behavior.
+
+- 3: CWE-476 Vulnerability:
+  - The vulnerability arises because the code does not check if the memory allocation was successful before using the allocated memory.
+  - This is a classic example of a null pointer dereference vulnerability.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if the memory allocation was successful before using the allocated memory. If the memory allocation fails, the code will attempt to access memory through a null pointer, leading to undefined behavior. Proper error checking should be added to ensure that the allocated memory is not null before using it.
+
+### Step 2. Fixing Strategy:
+A common fixing strategy is to add a null check after the memory allocation to ensure that the allocated memory is not null before using it. If the allocation fails, the function should return an error or handle the failure in a way that prevents the null pointer dereference. Therefore, the patch should add a null check after the memory allocation and return an error if the allocation fails.
+
+The patch adds a null check after the memory allocation:
+```c
+key = OPENSSL_malloc(sizeof(CAPI_KEY));
+if (key == NULL)
+{
+    return NULL;
+}
+```
+This ensures that the code does not attempt to access memory through a null pointer, preventing the null pointer dereference vulnerability.

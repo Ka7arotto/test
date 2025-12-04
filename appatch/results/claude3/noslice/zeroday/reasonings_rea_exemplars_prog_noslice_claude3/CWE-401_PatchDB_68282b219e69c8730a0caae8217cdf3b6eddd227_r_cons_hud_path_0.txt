@@ -1,0 +1,17 @@
+The root cause of the CWE-401 (Missing Release of Memory after Effective Lifetime) vulnerability at line 35 is that the memory allocated for the `tmp` variable is not properly released in certain cases.
+
+Specifically, the vulnerability occurs in the following scenario:
+
+1. The `files` list is not empty (line 18).
+2. The `ret` variable is assigned a value from `r_cons_hud` (line 20).
+3. The `tmp` variable is modified by concatenating strings (lines 23 and 24).
+4. The `ret` variable is assigned a new value from `r_file_abspath` (line 25).
+5. The previous value of `tmp` is freed (line 26).
+6. The `tmp` variable is assigned the value of `ret` (line 27).
+7. The `r_file_is_directory` condition is true (line 28).
+8. The `r_cons_hud_path` function is called recursively with `tmp` as the argument (line 30).
+9. The recursive call returns, and the previous value of `tmp` is freed (line 31).
+10. The `tmp` variable is assigned the return value of the recursive call (line 32).
+11. At this point, if the recursive call returned `NULL`, the memory allocated for `tmp` in the previous iteration is not freed, leading to a memory leak.
+
+To fix this vulnerability, the code should ensure that the memory allocated for `tmp` is properly released in all cases, including when the recursive call to `r_cons_hud_path` returns `NULL`.

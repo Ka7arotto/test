@@ -1,0 +1,24 @@
+## Reasoning Steps for Patching CWE-787 in `find_and_decode_index`
+
+Here's a breakdown of the reasoning behind the patch:
+
+**Step 1. Root Cause Analysis:**
+
+- **Potential Negative Offset:** The core issue lies in the `avio_seek` call. It attempts to move the file pointer to a position calculated as `filesize - 12`. 
+    - If `filesize` is less than 12, the resulting offset will be negative. 
+    - Seeking with a negative offset can lead to undefined behavior in `avio_seek`, potentially causing an out-of-bounds access.
+
+**Step 2. Fixing Strategy:**
+
+- **Input Validation:** The patch focuses on preventing the negative offset scenario. 
+    - It introduces a check before the `avio_seek` call: `if (filesize <= 0)`.
+    - If `filesize` is less than or equal to zero, the function immediately returns -1, signaling an error. 
+    - This effectively prevents the `avio_seek` call from executing with an invalid offset.
+
+**Reasoning Behind the Patch:**
+
+- **Defensive Programming:** The patch prioritizes robustness by validating the input (`filesize`) before using it in a potentially dangerous operation (`avio_seek`).
+- **Early Exit for Invalid Input:** By returning early when `filesize` is invalid, the code avoids undefined behavior and potential crashes.
+- **Clear Error Handling:** Returning -1 in the error case provides a clear indication that the function encountered an issue, allowing the calling code to handle it appropriately.
+
+**Improved Code Safety:** The patch directly addresses the CWE-787 vulnerability by preventing out-of-bounds writes that could have resulted from the negative offset in `avio_seek`. It makes the code more reliable and secure by ensuring that file operations occur within valid bounds. 

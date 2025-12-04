@@ -1,0 +1,40 @@
+Let's break down this CWE-401 (Memory Leak) vulnerability and the reasoning behind the patch.
+
+**Step 1: Root Cause Analysis**
+
+* **Dynamic Allocation:** Inside the loop (lines 7-17), the code iterates through `rt->rtsp_streams`, which appears to be an array of `RTSPStream` pointers.  Importantly, there's a strong indication that these `RTSPStream` structures were dynamically allocated earlier in the code (we don't see the allocation in this snippet, but it's implied).
+* **Conditional Resource Release:** The code does attempt to clean up resources:
+    * **Line 14:** It calls `rtsp_st->dynamic_handler->close(...)`, which likely releases resources held by the `dynamic_protocol_context`.
+    * **Line 18:**  `av_free(rt->rtsp_streams)` is called *after* the loop, freeing the array holding the pointers. 
+* **The Leak:** The critical issue is that while the code frees the *array* holding the `RTSPStream` pointers, it **never frees the individual `RTSPStream` structures themselves**. This leads to a memory leak – the memory allocated for each `RTSPStream` becomes unreachable and unusable.
+
+**Step 2: Fixing Strategy**
+
+To prevent the memory leak, we need to ensure that every dynamically allocated `RTSPStream` is properly released. The most logical place to do this is within the loop, immediately after we're done using each `RTSPStream`.
+
+**The Patch Explained**
+
+```diff
+<             }
+<         }
+---
+>             }
+>             av_free(rtsp_st);
+>         }
+```
+
+* **Line Added:** The key addition is `av_free(rtsp_st);`. This line directly frees the memory pointed to by `rtsp_st`, which represents the current `RTSPStream` in the iteration.
+* **Placement:** The placement of the `av_free` is crucial:
+    * **Inside the `if (rtsp_st)` block:**  Ensures we only attempt to free a valid pointer.
+    * **After potential resource release:** It's placed after the call to `rtsp_st->dynamic_handler->close(...)`, ensuring any resources held *within* the `RTSPStream` are released before freeing the structure itself.
+
+**Why This Matters**
+
+* **Resource Exhaustion:** Memory leaks lead to programs gradually consuming more and more memory over time.  Eventually, this can cause the program to crash or significantly degrade system performance.
+* **Security Risks:**  Unreleased memory can sometimes contain sensitive data. Although not directly exploited in this case, memory leaks can contribute to a larger attack surface. 
+
+**Best Practices**
+
+* **Ownership and Lifetime:** Carefully consider which part of your code is responsible for allocating and freeing memory.
+* **RAII (Resource Acquisition Is Initialization):**  If your programming language supports it (like C++), RAII techniques (e.g., using smart pointers) can help automate resource management and prevent these types of leaks. 
+* **Code Reviews and Static Analysis:** Tools can often detect potential memory leaks early in the development process. 

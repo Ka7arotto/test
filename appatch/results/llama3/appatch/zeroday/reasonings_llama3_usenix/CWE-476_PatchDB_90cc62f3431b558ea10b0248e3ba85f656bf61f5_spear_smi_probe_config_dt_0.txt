@@ -1,0 +1,37 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `pdata->board_flash_info`:
+  - `pdata->board_flash_info` is allocated using `devm_kzalloc`.
+  - If the allocation fails, `devm_kzalloc` returns `NULL`.
+  - However, the code does not check for this condition before using `pdata->board_flash_info`.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `pdata->board_flash_info` is `NULL` and the code attempts to access it.
+  - This is a classic example of a null pointer dereference vulnerability. Accessing a null pointer can lead to crashes or exploitable conditions.
+
+- 3: Vulnerable Behavior:
+  - The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `pdata->board_flash_info` is `NULL` before using it.
+  - This can lead to a null pointer dereference when trying to access `pdata->board_flash_info[i]`.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `pdata->board_flash_info` is `NULL` before using it. Proper error checking should be added to ensure that `pdata->board_flash_info` is not `NULL` before attempting to access it.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add error checking to ensure that `pdata->board_flash_info` is not `NULL` before using it. This can be done by adding a condition to check if `pdata->board_flash_info` is `NULL` after the allocation. If it is `NULL`, the function should return an error code to indicate that the allocation failed.
+
+Therefore, the patch should be:
+```
+<     pdata->board_flash_info = devm_kzalloc(&pdev->dev, sizeof(*pdata->board_flash_info), GFP_KERNEL);
+<     while ((pp = of_get_next_child(np, pp)))
+---
+>     pdata->board_flash_info = devm_kzalloc(&pdev->dev, sizeof(*pdata->board_flash_info), GFP_KERNEL);
+>     if (!pdata->board_flash_info)
+>     {
+>         return -ENOMEM;
+>     }
+>     while ((pp = of_get_next_child(np, pp)))
+```
+This patch adds a check to ensure that `pdata->board_flash_info` is not `NULL` before using it. If the allocation fails, the function returns an error code to indicate that the allocation failed.

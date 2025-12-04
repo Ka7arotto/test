@@ -1,0 +1,23 @@
+The CWE-787 vulnerability is an "Out-of-bounds Write" vulnerability. 
+
+The root cause of this vulnerability is that the `memcpy` function at line 12 does not perform any bounds checking on the destination buffer `r + i`. 
+
+In this specific case, the loop starts at `i = 3` and doubles `i` in each iteration until `i` is no longer less than `size / 2`. However, the `memcpy` function is called with `i` as the size of the data to be copied, and the destination address is `r + i`. 
+
+If `i` exceeds `size - i` (i.e., the remaining space in the buffer), the `memcpy` function will write beyond the end of the buffer, resulting in an out-of-bounds write. This can cause undefined behavior, including crashes, data corruption, or even code execution.
+
+To fix this vulnerability, you should ensure that the destination buffer has enough space to hold the data being copied. You can do this by changing the loop condition to `i < size - i` to ensure that `i` never exceeds the remaining space in the buffer.
+
+Here's the corrected code:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+    size_t i;
+    for (i = 3; i < size - i; i *= 2)
+        memcpy (r + i, r, i);
+}
+```
+
+Alternatively, you can also use `memmove` instead of `memcpy` to handle overlapping source and destination buffers. However, in this specific case, using `memmove` would not fix the out-of-bounds write vulnerability.

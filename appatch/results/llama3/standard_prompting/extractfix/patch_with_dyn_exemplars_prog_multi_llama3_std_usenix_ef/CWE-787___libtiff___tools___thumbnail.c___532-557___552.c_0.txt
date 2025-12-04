@@ -1,0 +1,72 @@
+Step 1:  CWE-787 vulnerability is an "Out-of-bounds Write" vulnerability. This occurs when the code writes data to a memory location that is outside the boundaries of a buffer or array.
+
+In this specific case, the vulnerability is caused by the line `rows[nrows++] = br + bpr*sy;`. 
+
+The root cause of this vulnerability is likely due to the fact that the `rows` array is not being bounds-checked before writing to it. The `nrows` variable is being incremented without checking if it exceeds the maximum allowed index of the `rows` array.
+
+This can lead to a buffer overflow, where data is written to memory locations outside the `rows` array, potentially causing undefined behavior, crashes, or even code execution.
+
+To fix this vulnerability, the code should add a bounds check before writing to the `rows` array, for example:
+
+```c
+if (nrows < MAX_ROWS) {
+    rows[nrows++] = br + bpr*sy;
+} else {
+    // Handle error or overflow condition
+}
+```
+
+Where `MAX_ROWS` is the maximum allowed size of the `rows` array.
+Here are the five possible patches for the vulnerability:
+
+**Patch 1**
+```
+< 	rows[nrows++] = br + bpr*sy;
+---
+> 	if (nrows < MAX_ROWS) {
+> 	    rows[nrows++] = br + bpr*sy;
+> 	} else {
+> 	    // Handle error or overflow condition
+> 	}
+```
+**Patch 2**
+```
+< 	rows[nrows++] = br + bpr*sy;
+---
+> 	if (nrows < sizeof(rows) / sizeof(rows[0])) {
+> 	    rows[nrows++] = br + bpr*sy;
+> 	} else {
+> 	    // Handle error or overflow condition
+> 	}
+```
+**Patch 3**
+```
+< 	rows[nrows++] = br + bpr*sy;
+---
+> 	if (nrows < ROWS_MAX_SIZE) {
+> 	    rows[nrows++] = br + bpr*sy;
+> 	} else {
+> 	    // Handle error or overflow condition
+> 	}
+```
+**Patch 4**
+```
+< 	rows[nrows++] = br + bpr*sy;
+---
+> 	if (nrows < (sizeof(rows) / sizeof(*rows))) {
+> 	    rows[nrows++] = br + bpr*sy;
+> 	} else {
+> 	    // Handle error or overflow condition
+> 	}
+```
+**Patch 5**
+```
+< 	rows[nrows++] = br + bpr*sy;
+---
+> 	if (nrows < (sizeof(rows) / sizeof(rows[0]))) {
+> 	    rows[nrows++] = br + bpr*sy;
+> 	} else {
+> 	    // Handle error or overflow condition
+> 	}
+```
+Note: In all patches, `MAX_ROWS`, `ROWS_MAX_SIZE`, and `sizeof(rows) / sizeof(rows[0])` should be replaced with the actual maximum size of the `rows` array.

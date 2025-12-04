@@ -1,0 +1,42 @@
+## Reasoning for the patch:
+
+This code snippet exhibits a CWE-401 (Memory Leak) vulnerability. Let's analyze the root cause and the reasoning behind the patch.
+
+**Step 1: Root Cause Analysis**
+
+The function allocates memory for `bss_cfg` using `kzalloc` at line 13. This memory needs to be freed before the function returns to avoid a memory leak. 
+
+The vulnerability arises in the `switch` statement (lines 32-43) handling `params->hidden_ssid`:
+
+* **Normal Cases:** Cases `NL80211_HIDDEN_SSID_NOT_IN_USE` and `NL80211_HIDDEN_SSID_ZERO_LEN` set the `bss_cfg->bcast_ssid_ctl` appropriately and execution continues. Crucially, `bss_cfg` is freed later in the function.
+* **Error Case (Vulnerable):** The `default` case (including `NL80211_HIDDEN_SSID_ZERO_CONTENTS`) represents an invalid input. The code correctly returns an error code `-EINVAL` but *fails to free `bss_cfg` before returning*.
+
+This failure to free the allocated memory in the error case leads to a memory leak.
+
+**Step 2: Fixing Strategy**
+
+The fix is straightforward: ensure `bss_cfg` is always freed before returning from the function, even in the error case.
+
+**Patch Explanation**
+
+```diff
+--- a/drivers/net/wireless/marvell/mwifiex/cfg80211.c
++++ b/drivers/net/wireless/marvell/mwifiex/cfg80211.c
+@@ -40,7 +40,8 @@
+ 38         bss_cfg->bcast_ssid_ctl = 0;
+ 39         break;
+ 40     case NL80211_HIDDEN_SSID_ZERO_CONTENTS:
+-41     default:
++41     default: 
++42         kfree(bss_cfg);
+ 43         return -EINVAL;
+ 44     }
+ 45     if (mwifiex_set_secure_params(priv, bss_cfg, params))
+
+```
+
+The patch adds `kfree(bss_cfg);` within the `default` case of the `switch` statement. This ensures that even if an invalid `hidden_ssid` value is encountered, the allocated memory for `bss_cfg` is properly released before returning the error code.
+
+**Conclusion**
+
+By adding this simple line, the patch prevents the memory leak and ensures that the resources are properly managed, even in error conditions. This highlights the importance of meticulous memory management in C code to prevent resource leaks and maintain application stability. 

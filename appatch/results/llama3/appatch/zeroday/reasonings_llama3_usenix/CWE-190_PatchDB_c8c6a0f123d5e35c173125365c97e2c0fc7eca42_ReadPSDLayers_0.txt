@@ -1,0 +1,28 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis:
+
+- 1: Validate `length`:
+  - `length` is obtained from `ReadBlobByte(image)`. We need to consider what values `length` might take.
+  - If `length` is a negative value, this could lead to an integer overflow when cast to `MagickSizeType`.
+
+- 2: Integer Overflow:
+  - The size of `MagickSizeType` is likely larger than `char` (usually `unsigned int` or `size_t`).
+  - When a negative `char` value is cast to `MagickSizeType`, it will be interpreted as a large positive number due to sign extension, potentially leading to an integer overflow.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `length` is a negative value, which results in an integer overflow when cast to `MagickSizeType`.
+  - This is a classic example of an integer overflow vulnerability. It can lead to unexpected behavior, crashes, or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is an integer overflow. It occurs because the cast from `char` to `MagickSizeType` does not account for the possibility of negative values. If `length` is negative, the cast will result in a large positive number, potentially leading to an integer overflow. Proper handling of negative values should be added to prevent this vulnerability.
+
+### Step 2. Fixing Strategy:
+
+A common fixing strategy is to ensure that the value read from `ReadBlobByte(image)` is treated as an unsigned value before being cast to `MagickSizeType`. This can be done by casting the result to `unsigned char` before assigning it to `length`. Therefore, the patch should be:
+```
+<                 length = (MagickSizeType)ReadBlobByte(image);
+---
+>                 length = (MagickSizeType)(unsigned char)ReadBlobByte(image);
+```
+This patch ensures that the value read from `ReadBlobByte(image)` is treated as an unsigned value, preventing the possibility of an integer overflow when cast to `MagickSizeType`.

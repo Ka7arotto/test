@@ -1,0 +1,43 @@
+The patching process for addressing the CWE-476 (NULL Pointer Dereference) vulnerability can be broken down into two main steps: Root Cause Analysis and Fixing Strategy.
+
+### Step 1: Root Cause Analysis
+
+1. **Understanding the Code Context:**
+   - The function `qlcnic_set_multi` is working with network device structures and appears to be setting up multicast addresses.
+   - The variable `cur` is allocated memory using `kzalloc` at line 16.
+
+2. **Identifying the Vulnerability:**
+   - `kzalloc` is a kernel function that allocates memory and initializes it to zero. It can return `NULL` if the memory allocation fails.
+   - The line `memcpy(cur->mac_addr, ha->addr, ETH_ALEN);` at line 17 assumes that `cur` is not `NULL`.
+   - If `kzalloc` fails and returns `NULL`, dereferencing `cur` in the `memcpy` function will lead to a NULL pointer dereference, causing a crash or undefined behavior.
+
+3. **Potential Vulnerability:**
+   - The vulnerability arises because there is no check to ensure that `cur` is not `NULL` before it is dereferenced.
+   - This is a classic example of a NULL pointer dereference vulnerability. If `cur` is `NULL`, any attempt to access its members will result in a crash.
+
+### Step 2: Fixing Strategy
+
+1. **Adding a NULL Check:**
+   - To prevent the NULL pointer dereference, we need to check if `cur` is `NULL` after the `kzalloc` call.
+   - If `cur` is `NULL`, we should handle this case appropriately, such as by breaking out of the loop or returning an error.
+
+2. **Implementing the Patch:**
+   - The patch adds a check to see if `cur` is `NULL` immediately after the `kzalloc` call.
+   - If `cur` is `NULL`, the code breaks out of the loop, preventing the `memcpy` call and thus avoiding the NULL pointer dereference.
+
+The patch is as follows:
+```diff
+<                 cur = kzalloc(sizeof(qlcnic_mac_list_s), GFP_ATOMIC);
+<                 memcpy(cur->mac_addr, ha->addr, ETH_ALEN);
+---
+>                 cur = kzalloc(sizeof(qlcnic_mac_list_s), GFP_ATOMIC);
+>                 if (cur == NULL)
+>                 {
+>                     break;
+>                 }
+>                 memcpy(cur->mac_addr, ha->addr, ETH_ALEN);
+```
+
+### Conclusion
+
+The patch ensures that the `cur` pointer is checked for `NULL` after the memory allocation. If the allocation fails, the code breaks out of the loop, preventing the `memcpy` operation and thus avoiding the NULL pointer dereference. This effectively mitigates the CWE-476 vulnerability.

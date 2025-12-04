@@ -1,0 +1,27 @@
+The root cause of the CWE-787 vulnerability in the provided code lies in the **unbounded memory copy** performed by the `memcpy` function. Here's a breakdown:
+
+* **CWE-787: Out-of-bounds Write** This CWE describes a vulnerability where a program attempts to write data beyond the allocated memory boundaries of a buffer. This can lead to data corruption, crashes, or even potential code execution.
+
+* **The Problem:** The `memcpy` function at line 12 copies `i` bytes from the memory location pointed to by `r` to the memory location pointed to by `r + i`. The issue is that the value of `i` is doubled in each iteration of the loop. Eventually, `i` will exceed the size of the buffer pointed to by `r`, leading to an out-of-bounds write. 
+
+* **Example:** Consider the case where `size` is 16.  The loop will execute for `i = 3, 6, 12`. When `i` becomes 12, the `memcpy` function attempts to copy 12 bytes from `r` to `r + 12`. However, the allocated memory for `r` is only 16 bytes, so copying 12 bytes starting at `r + 12` will overwrite memory outside the allocated buffer, resulting in undefined behavior.
+
+**Solution:**
+
+To fix this vulnerability, you must ensure the memory copy operation stays within the allocated buffer bounds.  Here are some options:
+
+1. **Bound the Copy:** Instead of copying `i` bytes, copy a maximum of `size - i` bytes:
+   ```c
+   memcpy (r + i, r, size - i); 
+   ```
+
+2. **Limit the Loop:** Modify the loop condition to stop before `i` reaches half the buffer size:
+   ```c
+   for (i = 3; i < size / 4; i *= 2) 
+   ```
+
+3. **Use Safe Memory Functions:** Consider using safer alternatives to `memcpy`, such as `strncpy` or `memmove`, which accept a maximum length parameter. These functions can prevent out-of-bounds writes by ensuring they don't copy beyond the specified length.
+
+**Key Takeaway:**
+
+Whenever working with memory copy operations, especially in loops, be extremely cautious about potential buffer overflows. Always verify the size of the buffer and ensure the copy operation stays within its boundaries to prevent CWE-787 vulnerabilities.

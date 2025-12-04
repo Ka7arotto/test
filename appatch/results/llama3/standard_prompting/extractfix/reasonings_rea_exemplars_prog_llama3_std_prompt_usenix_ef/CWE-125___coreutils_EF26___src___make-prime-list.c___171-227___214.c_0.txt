@@ -1,0 +1,26 @@
+Q: Given the following code slice:
+```
+1 int
+2 main (int argc, char **argv)
+4   int limit;
+6   char *sieve;
+7   size_t size, i;
+12   if (argc != 2)
+18   limit = atoi (argv[1]);
+19   if (limit < 3)
+23   if ( !(limit & 1))
+24     limit--;
+26   size = (limit-1)/2;
+28   sieve = xalloc (size);
+29   memset (sieve, 1, size);
+34   for (i = 0; i < size;)
+36       unsigned p = 3+2*i;
+37       unsigned j;
+41       for (j = (p*p - 3)/2; j < size; j+= p)
+42         sieve[j] = 0;
+44       while (i < size && sieve[++i] == 0)```
+which has a CWE-125 vulnerability at line:
+```
+44       while (i < size && sieve[++i] == 0)
+```
+Please analyze the root cause of the vulnerability.

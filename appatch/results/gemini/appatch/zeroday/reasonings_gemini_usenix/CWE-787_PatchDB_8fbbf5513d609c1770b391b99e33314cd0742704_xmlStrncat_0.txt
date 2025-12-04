@@ -1,0 +1,47 @@
+## Reasoning Steps for Patching CWE-787 in xmlStrncat
+
+The provided `xmlStrncat` function attempts to concatenate two strings (`cur` and `add`) with a specified length limit (`len`). However, it's vulnerable to an out-of-bounds write (CWE-787) due to insufficient validation of the `size` variable returned by `xmlStrlen(cur)`. 
+
+Let's break down the reasoning for the patch:
+
+**Step 1: Root Cause Analysis**
+
+1. **Unvalidated `size`**: The function directly uses the value returned by `xmlStrlen(cur)` to calculate the required memory for `xmlRealloc`.  The problem arises when `xmlStrlen` encounters an error or malformed input.
+
+2. **`xmlStrlen` Behavior**: The documentation for `xmlStrlen` (or its equivalent in the specific XML library used) should be consulted. Typically,  string length functions return:
+   - **A non-negative value**: representing the length of the string if successful.
+   - **A negative value**: indicating an error, such as encountering a null terminator (`\0`) before processing the entire input, potentially signaling malformed input.
+
+3. **Integer Overflow**: When `size` is negative (due to an error in `xmlStrlen`), adding it to `len + 1` in the `xmlRealloc` call could result in an unexpected small positive value. This is because of integer overflow. This small positive value could lead to a buffer overflow if the `add` string is longer than the allocated space.
+
+**Step 2: Fixing Strategy**
+
+The core issue is the lack of validation for the return value of `xmlStrlen`. The patch addresses this by introducing an error check:
+
+```diff
+--- a/example.c
++++ b/example.c
+@@ -16,6 +16,9 @@
+ 17     size = xmlStrlen(cur);
+ 18     ret = (xmlChar *)xmlRealloc(cur, (size + len + 1) * sizeof(xmlChar));
+ ```
++```diff
++<     size = xmlStrlen(cur);
++<     ret = (xmlChar *)xmlRealloc(cur, (size + len + 1) * sizeof(xmlChar));
+ ---
+ >     size = xmlStrlen(cur);
+ >     if (size < 0)
+
+```
+
+**Explanation of the Patch:**
+
+1. **Check for Negative `size`**:  The added `if (size < 0)` condition specifically checks if `xmlStrlen` returned a negative value, indicating an error during string length calculation.
+
+2. **Handle Error**: If `size` is negative, the function now returns `NULL`. This signals an error condition to the caller, preventing further execution with potentially corrupted or invalid data. 
+
+3. **Safe Reallocation**: If `size` is non-negative, the reallocation proceeds as before. The error check ensures that the `size + len + 1` calculation is performed only when `size` is valid, preventing potential integer overflows and subsequent buffer overflows.
+
+**Conclusion**
+
+The patch effectively mitigates the CWE-787 vulnerability by adding a critical error-handling mechanism. By validating the return value of `xmlStrlen` and handling error cases appropriately, the code prevents potentially exploitable out-of-bounds write conditions. 

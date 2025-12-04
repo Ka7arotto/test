@@ -1,0 +1,24 @@
+diff
++--- a/bytes_chunk_extract.c
++++ b/bytes_chunk_extract.c
+@@ -12,6 +12,9 @@
+    start = (k - 1) * (file_size / n);
+ 13   if (initial_read != SIZE_MAX || start < initial_read)
+ 15       memmove (buf, buf + start, initial_read - start)
++    if (start > initial_read)
++        return;
++    memmove (buf, buf + start, initial_read - start);
++
+ 
+ --- a/bytes_chunk_extract.c
+ +++ b/bytes_chunk_extract.c
+@@ -30,7 +33,27 @@
+ 
+ **Explanation of the Patches**
+ 
+-
++**Patch 1:**
++
++The first patch adds a check to ensure that `start` is not greater than `initial_read` before calling `memmove`. This prevents the `initial_read - start` calculation from resulting in a negative value, which could cause an out-of-bounds access.
++
++

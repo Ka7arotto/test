@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -x
+
+require () {
+    hash "$1" 2>/dev/null || { echo "command $1 is not found"; exit 1; }
+}
+
+require opt
+
+script_path=`dirname $0`
+echo $script_path
+
+usage="Usage: ./fault_localization SUBJECT"
+
+if [[ $# > 0 ]]; then
+    subject="$1"
+    shift
+else
+    echo "$usage"
+    exit 1
+fi
+
+libLLVMFixLoc=${script_path}/../util/libLLVMFuncTracer.so
+if [ ! -f "${libLLVMFixLoc}" ]; then
+    echo "${libLLVMFixLoc} does not exist"
+    exit 1
+fi
+
+opt -S -load=${libLLVMFixLoc} -func_tracer $subject > ${subject}_with_func_trace.ll
+llvm-as ${subject}_with_func_trace.ll -o ${subject}_with_func_trace
+
+rm -rf ${subject}_with_func_trace.ll

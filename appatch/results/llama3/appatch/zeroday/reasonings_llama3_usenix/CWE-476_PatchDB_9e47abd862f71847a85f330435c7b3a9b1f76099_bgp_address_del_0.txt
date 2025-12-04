@@ -1,0 +1,37 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `addr`:
+  - `addr` is obtained from `hash_lookup(bgp_address_hash, &tmp)`.
+  - We need to consider what values `addr` might take.
+  - If `addr` is `NULL`, this could lead to a null pointer dereference.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `addr` is `NULL`, which results in a null pointer dereference when trying to access `addr->refcnt`.
+  - This is a classic example of a null pointer dereference vulnerability. Accessing a null pointer can lead to crashes or exploitable conditions.
+
+- 3: Lack of Error Handling:
+  - The code does not check if `addr` is `NULL` before trying to access its members.
+  - This lack of error handling makes the code vulnerable to null pointer dereferences.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `addr` is `NULL` before trying to access its members. If `addr` is `NULL`, the code will crash or exhibit undefined behavior. Proper error handling should be added to check if `addr` is `NULL` before trying to access its members.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add a null check before trying to access the members of `addr`. This can be done by adding a conditional statement to check if `addr` is `NULL` before trying to access `addr->refcnt`. If `addr` is `NULL`, the function should return or handle the error in a way that prevents the null pointer dereference.
+
+Therefore, the patch should be:
+```
+<     addr = hash_lookup(bgp_address_hash, &tmp);
+<     addr->refcnt--;
+---
+>     addr = hash_lookup(bgp_address_hash, &tmp);
+>     if (addr == NULL)
+>     {
+>         return;
+>     }
+>     addr->refcnt--;
+```
+This patch adds a null check before trying to access `addr->refcnt`, preventing the null pointer dereference vulnerability.

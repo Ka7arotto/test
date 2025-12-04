@@ -1,0 +1,13 @@
+
+< 	dec->numtiles = dec->numhtiles * dec->numvtiles;
+---
+> 	#include <gmp.h>
+> 	mpz_t numtiles;
+> 	mpz_init(numtiles);
+> 	mpz_mul_ui(numtiles, dec->numhtiles, dec->numvtiles);
+> 	if (mpz_cmp_ui(numtiles, INT_MAX) > 0) {
+> 		// handle overflow error
+> 	} else {
+> 		dec->numtiles = mpz_get_ui(numtiles);
+> 	}
+> 	mpz_clear(numtiles);

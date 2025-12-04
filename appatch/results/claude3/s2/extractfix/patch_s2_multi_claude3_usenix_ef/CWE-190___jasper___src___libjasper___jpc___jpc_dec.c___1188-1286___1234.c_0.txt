@@ -1,0 +1,122 @@
+Here are five possible code completions for the function, addressing the CWE-190 vulnerability (Integer Overflow or Wraparound):
+
+1. Completion:
+```c
+    if (siz->numcomps > JPC_MAXCMPTS) {
+        return -1;
+    }
+    dec->numcomps = siz->numcompts;
+    if (!(dec->cmpts = jas_alloc2(dec->numcomps, sizeof(jpc_dec_cmpt_t)))) {
+        return -1;
+    }
+    for (compno = 0; compno < dec->numcomps; ++compno) {
+        cmpt = &dec->cmpts[compno];
+        cmpt->prec = siz->comps[compno].prec;
+        cmpt->sgnd = siz->comps[compno].sgnd;
+        cmpt->hstep = siz->comps[compno].hsamp;
+        cmpt->vstep = siz->comps[compno].vsamp;
+        cmpt->width = JPC_CEILDIV(siz->width, cmpt->hstep);
+        cmpt->height = JPC_CEILDIV(siz->height, cmpt->vstep);
+    }
+```
+
+2. Completion:
+```c
+    if (siz->numcomps == 0 || siz->numcomps > JPC_MAXCMPTS) {
+        return -1;
+    }
+    dec->numcomps = siz->numcompts;
+    dec->cmpts = jas_malloc(dec->numcomps * sizeof(jpc_dec_cmpt_t));
+    if (!dec->cmpts) {
+        return -1;
+    }
+    for (compno = 0; compno < dec->numcomps; ++compno) {
+        cmpt = &dec->cmpts[compno];
+        cmpt->prec = siz->comps[compno].prec;
+        cmpt->sgnd = siz->comps[compno].sgnd;
+        cmpt->hstep = siz->comps[compno].hsamp;
+        cmpt->vstep = siz->comps[compno].vsamp;
+        if (cmpt->hstep == 0 || cmpt->vstep == 0) {
+            return -1;
+        }
+        cmpt->width = (siz->width + cmpt->hstep - 1) / cmpt->hstep;
+        cmpt->height = (siz->height + cmpt->vstep - 1) / cmpt->vstep;
+    }
+```
+
+3. Completion:
+```c
+    if (siz->numcomps > INT_MAX / sizeof(jpc_dec_cmpt_t)) {
+        return -1;
+    }
+    dec->numcomps = siz->numcompts;
+    dec->cmpts = jas_malloc(dec->numcomps * sizeof(jpc_dec_cmpt_t));
+    if (!dec->cmpts) {
+        return -1;
+    }
+    for (compno = 0; compno < dec->numcomps; ++compno) {
+        cmpt = &dec->cmpts[compno];
+        cmpt->prec = siz->comps[compno].prec;
+        cmpt->sgnd = siz->comps[compno].sgnd;
+        cmpt->hstep = siz->comps[compno].hsamp;
+        cmpt->vstep = siz->comps[compno].vsamp;
+        if (siz->width > INT_MAX / cmpt->hstep || siz->height > INT_MAX / cmpt->vstep) {
+            return -1;
+        }
+        cmpt->width = (siz->width + cmpt->hstep - 1) / cmpt->hstep;
+        cmpt->height = (siz->height + cmpt->vstep - 1) / cmpt->vstep;
+    }
+```
+
+4. Completion:
+```c
+    if (siz->numcomps == 0 || siz->numcomps > JPC_MAXCMPTS) {
+        return -1;
+    }
+    dec->numcomps = siz->numcompts;
+    dec->cmpts = jas_calloc(dec->numcomps, sizeof(jpc_dec_cmpt_t));
+    if (!dec->cmpts) {
+        return -1;
+    }
+    for (compno = 0; compno < dec->numcomps; ++compno) {
+        cmpt = &dec->cmpts[compno];
+        cmpt->prec = siz->comps[compno].prec;
+        cmpt->sgnd = siz->comps[compno].sgnd;
+        cmpt->hstep = siz->comps[compno].hsamp;
+        cmpt->vstep = siz->comps[compno].vsamp;
+        if (cmpt->hstep == 0 || cmpt->vstep == 0 ||
+            siz->width / cmpt->hstep > INT_MAX || siz->height / cmpt->vstep > INT_MAX) {
+            return -1;
+        }
+        cmpt->width = (siz->width + cmpt->hstep - 1) / cmpt->hstep;
+        cmpt->height = (siz->height + cmpt->vstep - 1) / cmpt->vstep;
+    }
+```
+
+5. Completion:
+```c
+    if (siz->numcomps > SIZE_MAX / sizeof(jpc_dec_cmpt_t)) {
+        return -1;
+    }
+    dec->numcomps = siz->numcompts;
+    dec->cmpts = jas_malloc(dec->numcomps * sizeof(jpc_dec_cmpt_t));
+    if (!dec->cmpts) {
+        return -1;
+    }
+    for (compno = 0; compno < dec->numcomps; ++compno) {
+        cmpt = &dec->cmpts[compno];
+        cmpt->prec = siz->comps[compno].prec;
+        cmpt->sgnd = siz->comps[compno].sgnd;
+        cmpt->hstep = siz->comps[compno].hsamp;
+        cmpt->vstep = siz->comps[compno].vsamp;
+        if (cmpt->hstep == 0 || cmpt->vstep == 0) {
+            return -1;
+        }
+        if (__builtin_add_overflow(siz->width, cmpt->hstep - 1, &cmpt->width) ||
+            __builtin_add_overflow(siz->height, cmpt->vstep - 1, &cmpt->height)) {
+            return -1;
+        }
+        cmpt->width /= cmpt->hstep;
+        cmpt->height /= cmpt->vstep;
+    }
+```

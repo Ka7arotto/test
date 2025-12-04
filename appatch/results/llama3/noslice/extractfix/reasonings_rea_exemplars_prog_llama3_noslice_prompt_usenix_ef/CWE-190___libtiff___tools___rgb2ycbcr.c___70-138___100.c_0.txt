@@ -1,0 +1,108 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 int
+2 main(int argc, char* argv[])
+3 {
+4 	TIFF *in, *out;
+5 	int c;
+6 #if !HAVE_DECL_OPTARG
+7 	extern int optind;
+8 	extern char *optarg;
+9 #endif
+10 
+11 	while ((c = getopt(argc, argv, "c:h:r:v:z")) != -1)
+12 		switch (c) {
+13 		case 'c':
+14 			if (streq(optarg, "none"))
+15 			    compression = COMPRESSION_NONE;
+16 			else if (streq(optarg, "packbits"))
+17 			    compression = COMPRESSION_PACKBITS;
+18 			else if (streq(optarg, "lzw"))
+19 			    compression = COMPRESSION_LZW;
+20 			else if (streq(optarg, "jpeg"))
+21 			    compression = COMPRESSION_JPEG;
+22 			else if (streq(optarg, "zip"))
+23 			    compression = COMPRESSION_ADOBE_DEFLATE;
+24 			else
+25 			    usage(-1);
+26 			break;
+27 		case 'h':
+28 			horizSubSampling = atoi(optarg);
+29 			break;
+30 		case 'v':
+31 			vertSubSampling = atoi(optarg);
+32 			break;
+33 		case 'r':
+34 			rowsperstrip = atoi(optarg);
+35 			break;
+36 		case 'z':	/* CCIR Rec 601-1 w/ headroom/footroom */
+37 			refBlackWhite[0] = 16.;
+38 			refBlackWhite[1] = 235.;
+39 			refBlackWhite[2] = 128.;
+40 			refBlackWhite[3] = 240.;
+41 			refBlackWhite[4] = 128.;
+42 			refBlackWhite[5] = 240.;
+43 			break;
+44 		case '?':
+45 			usage(0);
+46 			/*NOTREACHED*/
+47 		}
+48 	if (argc - optind < 2)
+49 		usage(-1);
+50 	out = TIFFOpen(argv[argc-1], "w");
+51 	if (out == NULL)
+52 		return (-2);
+53 	setupLumaTables();
+54 	for (; optind < argc-1; optind++) {
+55 		in = TIFFOpen(argv[optind], "r");
+56 		if (in != NULL) {
+57 			do {
+58 				if (!tiffcvt(in, out) ||
+59 				    !TIFFWriteDirectory(out)) {
+60 					(void) TIFFClose(out);
+61 					return (1);
+62 				}
+63 			} while (TIFFReadDirectory(in));
+64 			(void) TIFFClose(in);
+65 		}
+66 	}
+67 	(void) TIFFClose(out);
+68 	return (0);
+69 }
+```
+which has a CWE-190 vulnerability at line:
+```
+28 			horizSubSampling = atoi(optarg);
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

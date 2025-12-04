@@ -1,0 +1,37 @@
+## Reasoning for the Patch: CWE-401 (Memory Leak) in `cancel_channel_subscription`
+
+The provided code snippet suffers from a memory leak issue (CWE-401) due to incomplete memory deallocation. Let's break down the reasoning behind the patch:
+
+**Step 1: Identify the Leaked Memory**
+
+- Inside the loop iterating through `chan->subscriptions`, when a subscription matching `sd` is found, the code frees the `list` object (line 16). 
+- **However**, it **does not** free the `subscr` object, which was dynamically allocated and pointed to by `list->object_ptr` (line 11). 
+
+**Step 2: Understand the Consequence**
+
+- Failing to free `subscr` results in a memory leak.  The memory allocated for `subscr` is never released back to the system, even though it's no longer used. 
+- Over time, if this function is called repeatedly, it can lead to significant memory consumption and eventually exhaust available memory resources.
+
+**Step 3: Apply the Patch**
+
+The patch addresses this leak by adding a single line:
+
+```diff
+--- a/cancel_channel_subscription.c
++++ b/cancel_channel_subscription.c
+@@ -15,6 +15,7 @@
+ 14         {
+ 15             cancelled++;
+ 16             free(list);
++17             free(subscr);
+ 17             if (prev)
+ 18             {
+ 19                 prev->next = next;
+
+```
+
+- This line `free(subscr);` ensures that the dynamically allocated memory for `subscr` is released when the corresponding subscription is removed from the list.
+
+**Conclusion**
+
+By adding the `free(subscr);` statement, the patch effectively eliminates the memory leak and ensures proper memory management within the `cancel_channel_subscription` function. This prevents potential memory exhaustion issues and improves the overall stability of the code. 

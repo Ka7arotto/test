@@ -1,0 +1,5 @@
+The root cause of the CWE-401 (Missing Release of Memory after Effective Lifetime) vulnerability in the given code is that the memory allocated for the `devices` structure using `kzalloc` at line 10 is not being freed if the `copy_to_user` function fails at line 40.
+
+If the `copy_to_user` function returns a non-zero value (indicating an error), the function returns with the error code at line 42, without freeing the memory allocated for `devices`. This leads to a memory leak, as the allocated memory is not released after its effective lifetime.
+
+To fix this vulnerability, the `kfree(devices)` call at line 44 should be moved outside the `if` statement at line 40, ensuring that the memory is freed regardless of the success or failure of the `copy_to_user` function. This way, the allocated memory is properly released before the function returns, preventing memory leaks.

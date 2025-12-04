@@ -1,0 +1,21 @@
+## Reasoning for Patching CWE-787 in `http_read_stream`
+
+Here's a breakdown of the issue and the reasoning behind the provided patch:
+
+**Step 1: Root Cause Analysis**
+
+- **Data Flow:**  The code reads a chunk size from an HTTP response using `http_get_line` (line 25) and stores it in the `line` buffer. The `strtoll` function (line 31) converts this textual representation into a numerical `s->chunksize` (a 64-bit signed integer).
+- **Vulnerable Condition:** The vulnerability lies in the conditional statement `if (!s->chunksize)` on line 33. The code assumes that a chunk size of 0 is the only invalid scenario. However, `strtoll` can return 0 in two cases:
+    - **Legitimate zero chunk:** Indicating the end of chunked data.
+    - **Error during conversion:**  If `strtoll` fails to parse the data in the `line` buffer as a valid number, it might silently return 0.
+- **Potential Impact:** Due to this lack of error checking, a malformed HTTP response with a non-numerical chunk size could lead to `s->chunksize` being set to 0. The code would then proceed as if it had reached the end of the chunked data, potentially leading to data truncation or other unexpected behavior.
+
+**Step 2: Fixing Strategy**
+
+- **Robust Error Handling:** The patch addresses the vulnerability by introducing more comprehensive error handling after the `strtoll` call. 
+- **Checking for Conversion Errors:** The key change is the addition of `if (s->chunksize < 0)` immediately after the `av_log` statement. Since `strtoll` returns a negative value on error, this check ensures that any parsing issues are caught.
+- **Handling Invalid Data:** If `s->chunksize` is negative, indicating a conversion error, the function now returns `AVERROR_INVALIDDATA`. This signals to the caller that the HTTP response contained invalid data, allowing for more graceful error handling higher up in the application. 
+
+**In Summary:**
+
+The patch strengthens the code's resilience against malformed input by explicitly checking for and handling potential errors returned by `strtoll`. This prevents the misinterpretation of invalid chunk sizes as legitimate zeros, thus mitigating the risk of data corruption or unexpected program behavior. 

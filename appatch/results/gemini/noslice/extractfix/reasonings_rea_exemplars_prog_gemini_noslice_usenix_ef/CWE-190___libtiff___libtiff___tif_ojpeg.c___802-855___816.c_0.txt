@@ -1,0 +1,33 @@
+## Analyzing CWE-190  Vulnerability in OJPEGDecodeRaw
+
+The vulnerability at line 15 arises from the possibility of a **divide by zero** error.  Here's a breakdown of the behavior:
+
+1. **Input:** The function receives `cc` as an input argument, representing the number of bytes to be decoded. 
+2. **`sp->bytes_per_line`:** This variable holds the number of bytes per scanline in the image being decoded.  
+3. **Vulnerability:** Line 15 checks if `cc` is divisible by `sp->bytes_per_line`. If `sp->bytes_per_line` happens to be zero, the modulo operation (`%`) will result in a divide by zero error, leading to undefined behavior. This can cause the program to crash or exhibit unpredictable behavior.
+4. **Consequences:** 
+    - **Crash:** The most likely outcome is a program crash.
+    - **Unpredictable Behavior:** If the program doesn't crash, it could result in unpredictable and potentially dangerous behavior, leading to security vulnerabilities.
+
+**Reasoning:**
+
+- The vulnerability is in the conditional check at line 15. 
+- If `sp->bytes_per_line` is zero, the modulo operation will trigger a divide by zero error.
+- The condition is meant to ensure that the number of bytes to be decoded (`cc`) is a multiple of the bytes per line. However, it does not handle the case when `sp->bytes_per_line` is zero.
+
+**Mitigation:**
+
+To mitigate this vulnerability, the code needs to check for the case where `sp->bytes_per_line` is zero before performing the modulo operation. For example:
+
+```c
+if (sp->bytes_per_line == 0) {
+    TIFFErrorExt(tif->tif_clientdata, module, "Invalid bytes per line: 0");
+    return(0);
+}
+if (cc % sp->bytes_per_line != 0) {
+    TIFFErrorExt(tif->tif_clientdata, module, "Fractional scanline not read");
+    return(0);
+}
+```
+
+This ensures that the modulo operation is only performed when `sp->bytes_per_line` is a valid non-zero value, preventing the divide by zero error.

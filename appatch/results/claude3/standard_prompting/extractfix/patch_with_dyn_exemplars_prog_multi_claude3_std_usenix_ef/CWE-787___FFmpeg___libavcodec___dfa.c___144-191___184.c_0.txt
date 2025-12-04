@@ -1,0 +1,63 @@
+Step 1:  root cause of the CWE-787 (Out-of-bounds Write) vulnerability at line 35 is an incorrect boundary check that fails to prevent potential buffer overflow.
+
+Let's break down the issue:
+
+1. The vulnerability occurs in the else-if branch starting at line 29.
+
+2. In this branch, the code first advances the 'frame' pointer by 'v' bytes (line 33).
+
+3. Then, it attempts to write 4 bytes (2 pairs of 2 bytes each) starting from the new 'frame' position (lines 37-42).
+
+4. The check at line 35 is intended to ensure there's enough space for these writes, but it's inadequate:
+
+   ```c
+   if (frame_end - frame < width + 3)
+   ```
+
+5. This check has two main problems:
+   a) It uses 'width + 3' instead of 4, which is the actual number of bytes about to be written.
+   b) It doesn't account for the possibility that 'frame' might already be very close to or even beyond 'frame_end' after the advancement in line 33.
+
+6. As a result, even if this check passes, it doesn't guarantee that the subsequent writes will be within bounds.
+
+7. If 'frame' is already past 'frame_end' or if there's less than 4 bytes of space left, the writes on lines 37-42 will cause an out-of-bounds write, potentially overwriting memory that doesn't belong to the buffer.
+
+To fix this vulnerability, the check should be modified to ensure that there's always at least 4 bytes of space left in the buffer before performing the writes. Additionally, it should verify that 'frame' hasn't already moved past 'frame_end' after the advancement in line 33.
+Based on the root cause analysis, here are five possible patches for the CWE-787 vulnerability:
+
+Patch 1:
+```
+<             if (frame_end - frame < width + 3)
+---
+>             if (frame >= frame_end || frame_end - frame < 4)
+```
+
+Patch 2:
+```
+<             if (frame_end - frame < width + 3)
+---
+>             if (frame > frame_end - 4)
+```
+
+Patch 3:
+```
+<             if (frame_end - frame < width + 3)
+---
+>             if (frame + 4 > frame_end)
+```
+
+Patch 4:
+```
+<             if (frame_end - frame < width + 3)
+---
+>             if (frame >= frame_end || frame_end - frame < width || frame_end - frame < 4)
+```
+
+Patch 5:
+```
+<             if (frame_end - frame < width + 3)
+---
+>             if (frame < frame_start || frame + 4 > frame_end)
+```
+
+All these patches aim to ensure that there's enough space (at least 4 bytes) in the buffer before performing the writes, and that the 'frame' pointer hasn't moved past the end of the buffer. Each patch has a slightly different approach, but they all address the core issue of the vulnerability.

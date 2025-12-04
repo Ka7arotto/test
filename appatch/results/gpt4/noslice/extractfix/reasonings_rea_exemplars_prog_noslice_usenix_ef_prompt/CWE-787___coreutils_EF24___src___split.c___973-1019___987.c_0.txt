@@ -1,0 +1,86 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 static void
+2 bytes_chunk_extract (uintmax_t k, uintmax_t n, char *buf, size_t bufsize,
+3                      size_t initial_read, off_t file_size)
+4 {
+5   off_t start;
+6   off_t end;
+7 
+8   assert (k && n && k <= n && n <= file_size);
+9 
+10   start = (k - 1) * (file_size / n);
+11   end = (k == n) ? file_size : k * (file_size / n);
+12 
+13   if (initial_read != SIZE_MAX || start < initial_read)
+14     {
+15       memmove (buf, buf + start, initial_read - start);
+16       initial_read -= start;
+17     }
+18   else
+19     {
+20       if (lseek (STDIN_FILENO, start, SEEK_CUR) < 0)
+21         die (EXIT_FAILURE, errno, "%s", quotef (infile));
+22       initial_read = SIZE_MAX;
+23     }
+24 
+25   while (start < end)
+26     {
+27       size_t n_read;
+28       if (initial_read != SIZE_MAX)
+29         {
+30           n_read = initial_read;
+31           initial_read = SIZE_MAX;
+32         }
+33       else
+34         {
+35           n_read = safe_read (STDIN_FILENO, buf, bufsize);
+36           if (n_read == SAFE_READ_ERROR)
+37             die (EXIT_FAILURE, errno, "%s", quotef (infile));
+38         }
+39       if (n_read == 0)
+40         break; /* eof.  */
+41       n_read = MIN (n_read, end - start);
+42       if (full_write (STDOUT_FILENO, buf, n_read) != n_read
+43           && ! ignorable (errno))
+44         die (EXIT_FAILURE, errno, "%s", quotef ("-"));
+45       start += n_read;
+46     }
+47 }
+```
+which has a CWE-787 vulnerability at line:
+```
+15       memmove (buf, buf + start, initial_read - start);
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

@@ -1,0 +1,39 @@
+### Step 1: Root Cause Analysis
+
+#### Understanding the Code:
+1. **Function Purpose**: The function `initiate_stratum` is responsible for initiating a connection to a pool server, sending a subscription request, and processing the response.
+2. **Memory Allocation**: The function allocates memory dynamically using `strdup` to store strings received from the server.
+3. **Potential Memory Leak**: The line `pool->nonce1 = strdup(json_string_value(json_array_get(res_val, 1)));` allocates memory for `pool->nonce1` without checking if `pool->nonce1` already points to previously allocated memory.
+
+#### Identifying the Vulnerability:
+- **CWE-401: Memory Leak**: If `pool->nonce1` already contains a pointer to previously allocated memory, calling `strdup` again without freeing the old memory will result in a memory leak. This is because the old memory will no longer be accessible, and thus cannot be freed.
+
+### Step 2: Fixing Strategy
+
+#### Strategy:
+- **Free Previously Allocated Memory**: Before assigning a new value to `pool->nonce1`, ensure that any previously allocated memory is freed. This prevents memory leaks by ensuring that the old memory is properly deallocated before the new memory is assigned.
+
+#### Implementation:
+- **Add a `free` Call**: Insert a call to `free(pool->nonce1)` before reassigning `pool->nonce1` with the result of `strdup`.
+
+### Conclusion:
+The patch ensures that any previously allocated memory for `pool->nonce1` is freed before assigning new memory to it. This prevents memory leaks by ensuring that the old memory is properly deallocated.
+
+### Patch:
+```diff
+<     }
+<     pool->nonce1 = strdup(json_string_value(json_array_get(res_val, 1)));
+---
+>     }
+>     free(pool->nonce1);
+>     pool->nonce1 = strdup(json_string_value(json_array_get(res_val, 1)));
+```
+
+### Detailed Reasoning Steps:
+1. **Identify the Vulnerable Line**: The line `pool->nonce1 = strdup(json_string_value(json_array_get(res_val, 1)));` is identified as the source of the memory leak.
+2. **Understand the Allocation**: `strdup` allocates memory for a copy of the string returned by `json_string_value`.
+3. **Check for Existing Allocation**: Before assigning the new value, check if `pool->nonce1` already points to allocated memory.
+4. **Free Existing Memory**: If `pool->nonce1` is not `NULL`, free the existing memory to prevent a memory leak.
+5. **Assign New Value**: After freeing the old memory, assign the new value to `pool->nonce1`.
+
+By following these steps, the patch ensures that memory is managed correctly, preventing memory leaks and adhering to best practices for dynamic memory management.

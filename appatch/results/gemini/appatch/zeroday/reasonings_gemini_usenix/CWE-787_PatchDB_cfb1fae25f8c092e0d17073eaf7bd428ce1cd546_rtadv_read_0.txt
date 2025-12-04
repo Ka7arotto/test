@@ -1,0 +1,47 @@
+## Reasoning Steps for Patching CWE-787 in `rtadv_read`
+
+Here's a breakdown of the reasoning behind the provided patch:
+
+**Step 1: Root Cause Analysis**
+
+- **Understanding the Code:**
+    - The `rtadv_read` function reads data from a socket (`sock`) into a buffer (`buf`).
+    - `rtadv_recv_packet` is likely a custom function for receiving data on a specific protocol.
+    - The `BUFSIZ` macro typically represents a system-defined buffer size, which may not be the same as the actual size of the `buf` array.
+
+- **Identifying the Vulnerability:**
+    - The vulnerability lies in passing `BUFSIZ` as the size argument to `rtadv_recv_packet`. 
+    - If the data received from the socket (`len`) exceeds the size of the `buf` array (`RTADV_MSG_SIZE`), `rtadv_recv_packet` will write data beyond the allocated memory for `buf`.
+
+- **Potential Consequences:**
+    - This out-of-bounds write can overwrite adjacent data structures in memory, leading to:
+        - **Program Crashes:** Due to memory corruption or access violations.
+        - **Unexpected Behavior:** Corrupted data can cause the program to malfunction.
+        - **Security Vulnerabilities:** Attackers might exploit this vulnerability to execute arbitrary code by overwriting critical parts of the program's memory.
+
+**Step 2: Fixing Strategy**
+
+- **Correct Buffer Size:** The fundamental problem is using an incorrect buffer size. To fix this, the actual size of the `buf` array must be provided to `rtadv_recv_packet`.
+- **`sizeof` Operator:** The `sizeof` operator is the most reliable way to determine the size of an array in bytes. 
+
+**The Patch:**
+
+- **Original Code:** 
+   ```c
+   len = rtadv_recv_packet(sock, buf, BUFSIZ, &from, &ifindex, &hoplimit);
+   ```
+
+- **Patched Code:**
+   ```c
+   len = rtadv_recv_packet(sock, buf, sizeof(buf), &from, &ifindex, &hoplimit);
+   ```
+
+**Explanation:**
+
+- The patch replaces `BUFSIZ` with `sizeof(buf)`. 
+- This ensures that `rtadv_recv_packet` only writes data up to the maximum size of the `buf` array, preventing out-of-bounds writes and mitigating the CWE-787 vulnerability.
+
+**Additional Considerations:**
+
+- **Error Handling:**  It's essential to check the return value (`len`) of `rtadv_recv_packet` to handle cases where the received data size might still exceed the buffer size.
+- **Dynamic Allocation:** For situations where the required buffer size is unknown at compile time, dynamically allocate memory using `malloc()` and ensure proper bounds checks and memory management. 

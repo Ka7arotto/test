@@ -1,0 +1,138 @@
+Here are five possible code completions for the given function:
+
+**Completion 1: Simple decoding**
+```c
+static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+{
+    const uint8_t *frame_start = frame;
+    const uint8_t *frame_end   = frame + width * height;
+    int mask = 0x10000, bitbuf = 0;
+    int i, v, offset, count, segments;
+
+    for (i = 0; i < width * height; i++) {
+        if (bitbuf == 0) {
+            bitbuf = bytestream2_get_be16(gb);
+            mask = 0x8000;
+        }
+        v = (bitbuf & mask) ? 1 : 0;
+        bitbuf <<= 1;
+        mask >>= 1;
+        frame[i] = v;
+    }
+    return 0;
+}
+```
+
+**Completion 2: Decoding with error handling**
+```c
+static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+{
+    const uint8_t *frame_start = frame;
+    const uint8_t *frame_end   = frame + width * height;
+    int mask = 0x10000, bitbuf = 0;
+    int i, v, offset, count, segments;
+
+    for (i = 0; i < width * height; i++) {
+        if (bitbuf == 0) {
+            if (bytestream2_get_bytes_left(gb) < 2) {
+                return -1; // not enough data
+            }
+            bitbuf = bytestream2_get_be16(gb);
+            mask = 0x8000;
+        }
+        v = (bitbuf & mask) ? 1 : 0;
+        bitbuf <<= 1;
+        mask >>= 1;
+        frame[i] = v;
+    }
+    return 0;
+}
+```
+
+**Completion 3: Decoding with segment handling**
+```c
+static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+{
+    const uint8_t *frame_start = frame;
+    const uint8_t *frame_end   = frame + width * height;
+    int mask = 0x10000, bitbuf = 0;
+    int i, v, offset, count, segments;
+
+    segments = bytestream2_get_be16(gb);
+    for (i = 0; i < segments; i++) {
+        offset = bytestream2_get_be16(gb);
+        count = bytestream2_get_be16(gb);
+        if (offset + count > width * height) {
+            return -1; // invalid segment
+        }
+        for (int j = 0; j < count; j++) {
+            if (bitbuf == 0) {
+                bitbuf = bytestream2_get_be16(gb);
+                mask = 0x8000;
+            }
+            v = (bitbuf & mask) ? 1 : 0;
+            bitbuf <<= 1;
+            mask >>= 1;
+            frame[offset + j] = v;
+        }
+    }
+    return 0;
+}
+```
+
+**Completion 4: Decoding with run-length encoding**
+```c
+static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+{
+    const uint8_t *frame_start = frame;
+    const uint8_t *frame_end   = frame + width * height;
+    int mask = 0x10000, bitbuf = 0;
+    int i, v, offset, count, segments;
+
+    for (i = 0; i < width * height; ) {
+        if (bitbuf == 0) {
+            bitbuf = bytestream2_get_be16(gb);
+            mask = 0x8000;
+        }
+        v = (bitbuf & mask) ? 1 : 0;
+        bitbuf <<= 1;
+        mask >>= 1;
+        count = bytestream2_get_be16(gb);
+        for (int j = 0; j < count; j++) {
+            frame[i++] = v;
+        }
+    }
+    return 0;
+}
+```
+
+**Completion 5: Decoding with Huffman coding**
+```c
+static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+{
+    const uint8_t *frame_start = frame;
+    const uint8_t *frame_end   = frame + width * height;
+    int mask = 0x10000, bitbuf = 0;
+    int i, v, offset, count, segments;
+
+    // build Huffman tree
+    uint16_t huffman_tree[256];
+    for (i = 0; i < 256; i++) {
+        huffman_tree[i] = bytestream2_get_be16(gb);
+    }
+
+    for (i = 0; i < width * height; ) {
+        if (bitbuf == 0) {
+            bitbuf = bytestream2_get_be16(gb);
+            mask = 0x8000;
+        }
+        v = huffman_decode(bitbuf, mask, huffman_tree);
+        bitbuf <<= 1;
+        mask >>= 1;
+        frame[i++] = v;
+    }
+    return 0;
+}
+```
+
+Note that these are just examples and the actual implementation may vary depending on the specific requirements of the DDS1 decoding algorithm.

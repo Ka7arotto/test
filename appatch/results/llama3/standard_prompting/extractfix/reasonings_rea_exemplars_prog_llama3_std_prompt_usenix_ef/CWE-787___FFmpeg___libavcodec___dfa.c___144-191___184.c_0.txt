@@ -1,0 +1,36 @@
+Q: Given the following code slice:
+```
+1 static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+3     const uint8_t *frame_start = frame;
+4     const uint8_t *frame_end   = frame + width * height;
+5     int mask = 0x10000, bitbuf = 0;
+6     int i, v, offset, count, segments;
+8     segments = bytestream2_get_le16(gb);
+9     while (segments--) {
+10         if (bytestream2_get_bytes_left(gb) < 2)
+12         if (mask == 0x10000) {
+13             bitbuf = bytestream2_get_le16u(gb);
+14             mask = 1;
+17         if (bitbuf & mask) {
+18             v = bytestream2_get_le16(gb);
+19             offset = (v & 0x1FFF) << 2;
+20             count = ((v >> 13) + 2) << 1;
+21             if (frame - frame_start < offset || frame_end - frame < count*2 + width)
+23             for (i = 0; i < count; i++) {
+24                 frame[0] = frame[1] =
+27                 frame += 2;
+29         } else if (bitbuf & (mask << 1)) {
+30             v = bytestream2_get_le16(gb)*2;
+31             if (frame - frame_end < v)
+33             frame += v;
+35             if (frame_end - frame < width + 3)
+37             frame[0] = frame[1] =
+39             frame += 2;
+40             frame[0] = frame[1] =
+42             frame += 2;
+44         mask <<= 2;```
+which has a CWE-787 vulnerability at line:
+```
+35             if (frame_end - frame < width + 3)
+```
+Please analyze the root cause of the vulnerability.

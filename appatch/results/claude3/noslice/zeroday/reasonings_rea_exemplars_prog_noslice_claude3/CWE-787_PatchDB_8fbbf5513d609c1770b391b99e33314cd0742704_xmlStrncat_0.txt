@@ -1,0 +1,9 @@
+The root cause of the CWE-787 (Out-of-bounds Write) vulnerability in the given code is that the `xmlRealloc` function is called with an incorrect size calculation. Specifically, the issue lies in the following line:
+
+```
+18     ret = (xmlChar *)xmlRealloc(cur, (size + len + 1) * sizeof(xmlChar));
+```
+
+The problem is that the `len` parameter passed to the `xmlStrncat` function is not checked for a negative value before being used in the size calculation. If `len` is a negative value, the calculated size `(size + len + 1) * sizeof(xmlChar)` can become smaller than the original size of `cur`, leading to a buffer overflow when `memcpy` is called later.
+
+To fix this vulnerability, the code should check if `len` is negative before performing the size calculation and memory allocation. If `len` is negative, the function should return `NULL` or handle the error appropriately.

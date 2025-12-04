@@ -1,0 +1,39 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `a` and `b`:
+  - The function `mp_copy` takes two parameters `a` and `b` of type `mp_int *`.
+  - The function checks if `a` is equal to `b`, but it does not check if either `a` or `b` is `NULL`.
+  - If either `a` or `b` is `NULL`, the function may attempt to access memory through a null pointer, leading to undefined behavior.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if either `a` or `b` is `NULL`, which results in a null pointer dereference.
+  - This is a classic example of a null pointer dereference vulnerability. Accessing memory through a null pointer can lead to crashes or exploitable conditions.
+
+- 3: CWE-476:
+  - CWE-476 is a null pointer dereference vulnerability. It occurs when a program attempts to access memory through a null pointer.
+  - In this case, the vulnerability arises because the function does not check if either `a` or `b` is `NULL` before attempting to access memory through these pointers.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the function does not check if either `a` or `b` is `NULL` before attempting to access memory through these pointers. Proper null pointer checks should be added to ensure that neither `a` nor `b` is `NULL`.
+
+### Step 2. Fixing Strategy. 
+
+- A common fixing strategy is to add null pointer checks to ensure that neither `a` nor `b` is `NULL`.
+- If either `a` or `b` is `NULL`, the function should return an error code to indicate that the operation failed.
+- The original check `if (a == b)` should still be performed to handle the case where `a` and `b` are the same pointer.
+
+Therefore, the patch should be:
+```
+<     int res, n;
+<     if (a == b)
+---
+>     int res, n;
+>     if (a == NULL || b == NULL)
+>     {
+>         return MP_VAL;
+>     }
+>     if (a == b)
+```
+This patch adds null pointer checks to ensure that neither `a` nor `b` is `NULL` before attempting to access memory through these pointers. If either `a` or `b` is `NULL`, the function returns an error code to indicate that the operation failed.

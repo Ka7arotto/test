@@ -1,0 +1,36 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `drc`:
+  - `drc` is obtained from `wm8994_get_drc(kcontrol->id.name)`. We need to consider what values `drc` might take.
+  - If `drc` is negative or exceeds the bounds of the `wm8994->drc_cfg` array, this could lead to an out-of-bounds access.
+
+- 2: Array Size and Indexing:
+  - The size of the `wm8994->drc_cfg` array is not explicitly stated in this code snippet, but it's assumed to be a fixed size.
+  - The code does not check if `drc` is within the bounds of the `wm8994->drc_cfg` array before using it as an index.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `drc` is out of bounds of the `wm8994->drc_cfg` array.
+  - This is a classic example of an out-of-bounds read vulnerability. Reading outside the bounds of the allocated array can lead to undefined behavior, potentially causing crashes or revealing sensitive information.
+
+### Conclusion:
+The vulnerable behavior in this code is an out-of-bounds read. It occurs because the code does not ensure that `drc` is within the bounds of the `wm8994->drc_cfg` array before using it as an index. If `drc` is negative or exceeds the bounds of the array, the code will read past the end of the array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `drc` is within the valid range.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to validate the value of `drc` before using it as an index. Since `wm8994_get_drc` returns a negative value to indicate an error, we can add a simple check to return the error code if `drc` is negative. This ensures that `drc` is not used as an index if it's out of bounds. Therefore, the patch should be:
+
+```c
+<     int drc = wm8994_get_drc(kcontrol->id.name);
+<     ucontrol->value.enumerated.item[0] = wm8994->drc_cfg[drc];
+---
+>     int drc = wm8994_get_drc(kcontrol->id.name);
+>     if (drc < 0)
+>     {
+>         return drc;
+>     }
+>     ucontrol->value.enumerated.item[0] = wm8994->drc_cfg[drc];
+```
+
+This patch adds a simple bounds check to prevent out-of-bounds reads and ensures that the code handles error conditions properly.

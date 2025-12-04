@@ -1,0 +1,29 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate `subscr` and `list`:
+  - `subscr` is obtained from `list->object_ptr` and is cast to a `struct subscription *`.
+  - `list` is obtained from `chan->subscriptions` and is iterated through in the loop.
+
+- 2: Memory Management:
+  - When a matching `sd` is found, `list` is freed.
+  - However, `subscr` is not freed. This is a potential memory leak.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises because `subscr` is not freed when its corresponding `list` is removed from the linked list.
+  - This is a classic example of a memory leak vulnerability. Memory leaks can lead to resource exhaustion and potentially cause the program to crash or become unresponsive.
+
+### Conclusion:
+The vulnerable behavior in this code is a memory leak. It occurs because `subscr` is not freed when its corresponding `list` is removed from the linked list. Proper memory management should be added to ensure that `subscr` is freed when it is no longer needed.
+
+### Step 2. Fixing Strategy. A common fixing strategy is to free `subscr` when it is no longer needed. This can be done by adding a call to `free(subscr)` after `free(list)`. Therefore the patch should be:
+```
+<             free(list);
+<             if (prev)
+---
+>             free(list);
+>             free(subscr);
+>             if (prev)
+```
+This patch ensures that both `list` and `subscr` are freed when a matching `sd` is found, preventing a memory leak.

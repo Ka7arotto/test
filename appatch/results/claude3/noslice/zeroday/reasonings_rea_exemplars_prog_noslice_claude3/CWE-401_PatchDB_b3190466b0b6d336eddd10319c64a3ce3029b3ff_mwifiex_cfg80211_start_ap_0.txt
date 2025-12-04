@@ -1,0 +1,5 @@
+The root cause of the CWE-401 (Missing Release of Memory after Effective Lifetime) vulnerability in the given code is that the memory allocated for `bss_cfg` using `kzalloc` at line 13 is not being freed when the function returns with an error code `-EINVAL` at line 42.
+
+In the case of an error condition where `params->hidden_ssid` is set to an invalid value (neither `NL80211_HIDDEN_SSID_NOT_IN_USE` nor `NL80211_HIDDEN_SSID_ZERO_LEN`), the function returns with the error code `-EINVAL` without freeing the dynamically allocated memory for `bss_cfg`. This leads to a memory leak, as the allocated memory is not released after its effective lifetime.
+
+To fix this vulnerability, the code should free the allocated memory for `bss_cfg` before returning with the error code `-EINVAL`. This can be done by adding a `kfree(bss_cfg)` statement before the `return -EINVAL;` line.

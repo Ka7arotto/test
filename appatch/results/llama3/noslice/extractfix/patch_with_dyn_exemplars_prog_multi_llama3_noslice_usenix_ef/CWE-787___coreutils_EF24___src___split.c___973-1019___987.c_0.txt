@@ -1,0 +1,79 @@
+Step 1: : Validate `initial_read` and `start`:
+  - `initial_read` and `start` are used to calculate the number of bytes to be moved in the `memmove` function.
+  - We need to consider what values `initial_read` and `start` might take.
+  - If `initial_read` is less than `start`, this will result in an out-of-bounds access in the `buf` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `buf` array is `bufsize`.
+  - The `memmove` function is used to move `initial_read - start` bytes from `buf + start` to `buf`.
+  - If `initial_read - start` is greater than `bufsize - start`, then `memmove` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `initial_read - start` exceeds `bufsize - start`, which results in writing past the end of the `buf` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+- 4: Additional Consideration:
+  - The `memmove` function is used to move bytes within the `buf` array. However, if `start` is greater than `bufsize`, this will result in an out-of-bounds access in the `buf` array.
+  - Additionally, if `initial_read` is greater than `bufsize`, this will also result in an out-of-bounds access in the `buf` array.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the `memmove` function does not ensure that `initial_read - start` is within the bounds of the allocated array size `bufsize`. If `initial_read - start` is greater than `bufsize - start`, the `memmove` function will write past the end of the `buf` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `initial_read - start` does not exceed `bufsize - start`. Additionally, checks should be added to ensure that `start` and `initial_read` are within the bounds of the allocated array size `bufsize`.
+### Step 2. Fixing Strategy:
+
+A common fixing strategy is to make sure that the number of bytes moved by `memmove` is within the bounds of the allocated array size `bufsize`. This can be done by adding conditions to check if `initial_read - start` is less than or equal to `bufsize - start`, and if `start` and `initial_read` are within the bounds of the allocated array size `bufsize`. 
+
+Here are five possible patches for the vulnerability:
+
+Patch 1:
+```c
+if (initial_read > bufsize || start > bufsize || initial_read - start > bufsize - start) {
+    die (EXIT_FAILURE, 0, "Invalid read or start value");
+}
+memmove (buf, buf + start, initial_read - start);
+```
+
+Patch 2:
+```c
+if (start >= bufsize || initial_read >= bufsize || initial_read - start > bufsize - start) {
+    die (EXIT_FAILURE, 0, "Invalid read or start value");
+}
+memmove (buf, buf + start, initial_read - start);
+```
+
+Patch 3:
+```c
+size_t bytes_to_move = initial_read - start;
+if (bytes_to_move > bufsize - start) {
+    bytes_to_move = bufsize - start;
+}
+memmove (buf, buf + start, bytes_to_move);
+```
+
+Patch 4:
+```c
+if (initial_read < start) {
+    die (EXIT_FAILURE, 0, "Invalid read value");
+}
+size_t bytes_to_move = initial_read - start;
+if (bytes_to_move > bufsize - start) {
+    bytes_to_move = bufsize - start;
+}
+memmove (buf, buf + start, bytes_to_move);
+```
+
+Patch 5:
+```c
+if (start >= bufsize) {
+    die (EXIT_FAILURE, 0, "Invalid start value");
+}
+if (initial_read >= bufsize) {
+    die (EXIT_FAILURE, 0, "Invalid read value");
+}
+size_t bytes_to_move = initial_read - start;
+if (bytes_to_move > bufsize - start) {
+    bytes_to_move = bufsize - start;
+}
+memmove (buf, buf + start, bytes_to_move);
+```
+
+These patches ensure that the number of bytes moved by `memmove` is within the bounds of the allocated array size `bufsize`, preventing the buffer overflow vulnerability.

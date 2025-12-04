@@ -1,0 +1,37 @@
+Let's analyze the code step by step to understand the CWE-787 (Out-of-bounds Write) vulnerability:
+
+1. Input parameters:
+   - gb: GetByteContext pointer
+   - frame: uint8_t pointer to the output frame buffer
+   - width and height: dimensions of the frame
+
+2. Initial setup:
+   - frame_start is set to the beginning of the frame buffer
+   - frame_end is set to the end of the frame buffer (frame + width * height)
+
+3. The function processes segments in a loop:
+   - segments count is read from gb
+
+4. In each iteration, based on bitbuf and mask, different actions are taken:
+   - Copy from a previous offset
+   - Skip some bytes
+   - Write new bytes
+
+5. The vulnerability occurs in the third case (else block):
+   - Line 35 checks if there's enough space left in the frame buffer
+   - It checks if (frame_end - frame) is less than (width + 3)
+
+6. The vulnerability:
+   - The check on line 35 is insufficient
+   - It only ensures there's space for (width + 3) bytes
+   - However, the code writes to frame[width] and frame[width + 1]
+
+7. Potential out-of-bounds write:
+   - If (frame_end - frame) is exactly (width + 3), the check passes
+   - But when writing to frame[width] and frame[width + 1], it goes beyond the buffer
+
+8. Consequence:
+   - This can lead to writing up to 2 bytes past the end of the allocated buffer
+   - It results in a buffer overflow, potentially corrupting adjacent memory
+
+The vulnerability arises because the boundary check doesn't account for all the writes that follow. It should check for at least (width + 4) bytes to ensure safety for all subsequent writes. This out-of-bounds write can lead to memory corruption, crashes, or even potential code execution vulnerabilities if exploited.

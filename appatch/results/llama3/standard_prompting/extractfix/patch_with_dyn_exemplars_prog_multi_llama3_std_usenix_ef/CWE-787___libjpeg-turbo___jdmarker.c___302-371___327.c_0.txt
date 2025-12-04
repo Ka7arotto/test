@@ -1,0 +1,78 @@
+Step 1:  CWE-787 vulnerability is an "Out-of-bounds Write" vulnerability. 
+
+In this case, the vulnerability occurs because the loop counter `i` is bounded by `cinfo->num_components`, but the array `cinfo->cur_comp_info` is bounded by `MAX_COMPS_IN_SCAN`. 
+
+If `cinfo->num_components` is greater than `MAX_COMPS_IN_SCAN`, then the loop will attempt to write to an index of `cinfo->cur_comp_info` that is out of bounds, resulting in undefined behavior.
+
+The root cause of this vulnerability is that the code does not properly validate the relationship between `cinfo->num_components` and `MAX_COMPS_IN_SCAN` before writing to the `cinfo->cur_comp_info` array.
+
+To fix this vulnerability, the code should add a check to ensure that `cinfo->num_components` is not greater than `MAX_COMPS_IN_SCAN` before the loop. Here is an example of how the code could be modified to fix the vulnerability:
+
+```c
+if (cinfo->num_components > MAX_COMPS_IN_SCAN) {
+    // Handle error: num_components exceeds maximum allowed
+    // This could involve returning an error code or throwing an exception
+}
+
+for (i = 0; i < cinfo->num_components; i++) {
+    cinfo->cur_comp_info[i] = NULL;
+}
+```
+
+Alternatively, the code could use a more dynamic approach to allocate memory for `cinfo->cur_comp_info` based on the value of `cinfo->num_components`, rather than relying on a fixed-size array.
+Here are the five possible patches for the vulnerability:
+
+**Patch 1**
+```
+<   for (i = 0; i < cinfo->num_components; i++)
+---
+>   for (i = 0; i < MIN(cinfo->num_components, MAX_COMPS_IN_SCAN); i++)
+```
+This patch ensures that the loop counter `i` does not exceed the bounds of the `cinfo->cur_comp_info` array.
+
+**Patch 2**
+```
+<   for (i = 0; i < cinfo->num_components; i++)
+---
+>   if (cinfo->num_components > MAX_COMPS_IN_SCAN) {
+>       // Handle error: num_components exceeds maximum allowed
+>   } else {
+>       for (i = 0; i < cinfo->num_components; i++) {
+>           cinfo->cur_comp_info[i] = NULL;
+>       }
+>   }
+```
+This patch adds a check to ensure that `cinfo->num_components` does not exceed `MAX_COMPS_IN_SCAN` before the loop. If it does, an error is handled.
+
+**Patch 3**
+```
+<   cinfo->cur_comp_info[i] = NULL;
+---
+>   if (i < MAX_COMPS_IN_SCAN) {
+>       cinfo->cur_comp_info[i] = NULL;
+>   } else {
+>       // Handle error: out-of-bounds access
+>   }
+```
+This patch adds a check inside the loop to ensure that `i` is within the bounds of the `cinfo->cur_comp_info` array before writing to it.
+
+**Patch 4**
+```
+<   cinfo->cur_comp_info[i] = NULL;
+---
+>   if (i >= MAX_COMPS_IN_SCAN) break;
+>   cinfo->cur_comp_info[i] = NULL;
+```
+This patch adds a check inside the loop to ensure that `i` does not exceed the bounds of the `cinfo->cur_comp_info` array. If it does, the loop is terminated.
+
+**Patch 5**
+```
+<   cinfo->cur_comp_info[i] = NULL;
+---
+>   if (cinfo->num_components <= MAX_COMPS_IN_SCAN) {
+>       cinfo->cur_comp_info[i] = NULL;
+>   } else {
+>       // Handle error: num_components exceeds maximum allowed
+>   }
+```
+This patch adds a check inside the loop to ensure that `cinfo->num_components` does not exceed `MAX_COMPS_IN_SCAN` before writing to the `cinfo->cur_comp_info` array. If it does, an error is handled.

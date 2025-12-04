@@ -1,0 +1,35 @@
+The CWE-190 vulnerability is a Divide By Zero vulnerability. However, in this specific case, the vulnerability is not a direct divide by zero error. Instead, it's a potential division by zero error that can occur due to an incorrect assumption about the value of `sp->v_sampling`.
+
+The root cause of the vulnerability is that the code does not check if `sp->v_sampling` is zero before using it as a divisor in the modulo operation. If `sp->v_sampling` is zero, the expression `(td->td_tilelength % (sp->v_sampling * DCTSIZE))` will result in a division by zero error.
+
+To fix this vulnerability, the code should add a check to ensure that `sp->v_sampling` is not zero before performing the modulo operation. Here's an example of how the code can be modified to fix the vulnerability:
+
+```c
+if (sp->v_sampling == 0) {
+    TIFFErrorExt(tif->tif_clientdata, module,
+                 "Vertical sampling factor cannot be zero");
+    return (0);
+}
+if ((td->td_tilelength % (sp->v_sampling * DCTSIZE)) != 0) {
+    TIFFErrorExt(tif->tif_clientdata, module,
+                  "JPEG tile height must be multiple of %d",
+                  sp->v_sampling * DCTSIZE);
+    return (0);
+}
+```
+
+Similarly, the code should also add a check to ensure that `sp->h_sampling` is not zero before performing the modulo operation in the following lines:
+
+```c
+if (sp->h_sampling == 0) {
+    TIFFErrorExt(tif->tif_clientdata, module,
+                 "Horizontal sampling factor cannot be zero");
+    return (0);
+}
+if ((td->td_tilewidth % (sp->h_sampling * DCTSIZE)) != 0) {
+    TIFFErrorExt(tif->tif_clientdata, module,
+                  "JPEG tile width must be multiple of %d",
+                  sp->h_sampling * DCTSIZE);
+    return (0);
+}
+```

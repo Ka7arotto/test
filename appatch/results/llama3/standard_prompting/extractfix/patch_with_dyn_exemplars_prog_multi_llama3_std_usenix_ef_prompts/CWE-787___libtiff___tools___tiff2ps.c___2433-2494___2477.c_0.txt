@@ -1,0 +1,344 @@
+
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the `count` parameter in the `sc_read_binary` function may exceed the size of the `buf` array, causing a buffer overflow. This can happen when `file->size` is larger than the size of the `buf` array.
+
+Step 2. Fixing Strategy. A common fixing strategy is to ensure that the `count` parameter does not exceed the size of the `buf` array. This can be done by limiting the `bufsize` to the minimum of `file->size` and the size of the `buf` array. Therefore, the patch should be:
+```
+< 	bufsize = file->size;
+---
+> 	bufsize = MIN(file->size, sizeof buf);
+```
+This patch ensures that the `bufsize` does not exceed the size of the `buf` array, preventing the buffer overflow vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static int rtadv_read(struct thread *thread)
+3     int sock;
+4     int len;
+5     u_char buf[RTADV_MSG_SIZE];
+10     sock = THREAD_FD(thread);
+13     len = rtadv_recv_packet(sock, buf, BUFSIZ, &from, &ifindex, &hoplimit);```
+which has a CWE-787 vulnerability at line:
+```
+13     len = rtadv_recv_packet(sock, buf, BUFSIZ, &from, &ifindex, &hoplimit);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the buffer `buf` has a fixed size of `RTADV_MSG_SIZE`, but the function `rtadv_recv_packet` is allowed to write up to `BUFSIZ` bytes into `buf`. If `BUFSIZ` is larger than `RTADV_MSG_SIZE`, this will cause a buffer overflow, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to ensure that the function `rtadv_recv_packet` does not write more bytes into `buf` than it can hold. This can be done by passing the actual size of `buf` to the function instead of `BUFSIZ`. Therefore, the patch should be:
+```
+<     len = rtadv_recv_packet(sock, buf, BUFSIZ, &from, &ifindex, &hoplimit);
+---
+>     len = rtadv_recv_packet(sock, buf, sizeof(buf), &from, &ifindex, &hoplimit);
+```
+This patch ensures that `rtadv_recv_packet` will not write more bytes into `buf` than it can hold, thus preventing the buffer overflow vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 do_core_note(struct magic_set *ms, unsigned char *nbuf, uint32_t type,
+2     int swap, uint32_t namesz, uint32_t descsz,
+3     size_t noff, size_t doff, int *flags, size_t size, int clazz)
+6 	int os_style = -1;
+21 	if ((namesz == 4 && strncmp((char *)&nbuf[noff], "CORE", 4) == 0) ||
+23 		os_style = OS_STYLE_SVR4;
+26 	if ((namesz == 8 && strcmp((char *)&nbuf[noff], "FreeBSD") == 0)) {
+27 		os_style = OS_STYLE_FREEBSD;
+30 	if ((namesz >= 11 && strncmp((char *)&nbuf[noff], "NetBSD-CORE", 11)
+32 		os_style = OS_STYLE_NETBSD;
+35 	if (os_style != -1 && (*flags & FLAGS_DID_CORE_STYLE) == 0) {
+36 		if (file_printf(ms, ", %s-style", os_style_names[os_style])
+43 	switch (os_style) {
+45 		if (type == NT_NETBSD_CORE_PROCINFO) {
+47 			struct NetBSD_elfcore_procinfo pi;
+48 			memset(&pi, 0, sizeof(pi));
+49 			memcpy(&pi, nbuf + doff, descsz);```
+which has a CWE-787 vulnerability at line:
+```
+49 			memcpy(&pi, nbuf + doff, descsz);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+A: The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the `descsz` may be larger than `sizeof(pi)`. When this happens, the buffer write to `pi` will overflow the boundary, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the number of bytes copied by `memcpy` does not exceed the size of the buffer `pi`. This can be done by limiting the number of bytes copied to the minimum of `descsz` and `sizeof(pi)`. Therefore the patch should be:
+```
+< 			memcpy(&pi, nbuf + doff, descsz);
+---
+> 			memcpy(&pi, nbuf + doff, MIN(descsz, sizeof(pi)));
+```
+This patch ensures that the `memcpy` operation does not write beyond the boundary of `pi`, thus preventing the out-of-bounds write vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static int snd_usb_copy_string_desc(struct mixer_build *state, int index, char *buf, int maxlen)
+3     int len = usb_string(state->chip->dev, index, buf, maxlen - 1);
+4     buf[len] = 0;```
+which has a CWE-787 vulnerability at line:
+```
+4     buf[len] = 0;
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the function `usb_string` may return a negative value, which is then used as an index to access the `buf` array. If `len` is negative, the buffer write to `buf` will underflow the boundary, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to check if `len` is within the valid range before using it as an index. This can be done by adding a conditional check to ensure `len` is not negative before accessing the `buf` array. Therefore, the patch should be:
+```
+<     int len = usb_string(state->chip->dev, index, buf, maxlen - 1);
+<     buf[len] = 0;
+---
+>     int len = usb_string(state->chip->dev, index, buf, maxlen - 1);
+>     if (len < 0)
+>     {
+>         return 0;
+>     }
+>     buf[len] = 0;
+```
+This patch ensures that `len` is not negative before using it to access the `buf` array, thereby preventing the out-of-bounds write vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static int ProcRenderSetPictureFilter(ClientPtr client)
+4     PicturePtr pPicture;
+5     int result;
+6     xFixed *params;
+7     int nparams;
+8     char *name;
+11     name = (char *)(stuff + 1);
+12     params = (xFixed *)(name + pad_to_int32(stuff->nbytes));
+13     nparams = ((xFixed *)stuff + client->req_len) - params;
+14     result = SetPictureFilter(pPicture, name, stuff->nbytes, params, nparams);```
+which has a CWE-787 vulnerability at line:
+```
+14     result = SetPictureFilter(pPicture, name, stuff->nbytes, params, nparams);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the variable `nparams` may be less than 0 if the calculation `((xFixed *)stuff + client->req_len) - params` results in a negative value. When this happens, the function `SetPictureFilter` will receive an invalid `nparams` value, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the variable `nparams` cannot be less than 0. This can be done by adding a condition to check if `nparams` is less than 0 before calling the `SetPictureFilter` function. If `nparams` is less than 0, return an error code `BadLength`. Therefore, the patch should be:
+```
+<     nparams = ((xFixed *)stuff + client->req_len) - params;
+<     result = SetPictureFilter(pPicture, name, stuff->nbytes, params, nparams);
+---
+>     nparams = ((xFixed *)stuff + client->req_len) - params;
+>     if (nparams < 0)
+>     {
+>         return BadLength;
+>     }
+>     result = SetPictureFilter(pPicture, name, stuff->nbytes, params, nparams);
+```
+
+
+Q: Given the following code slice:
+```
+1 static struct sk_buff *ipv6_gso_segment(struct sk_buff *skb, netdev_features_t features)
+4     struct ipv6hdr *ipv6h;
+5     const struct net_offload *ops;
+6     int proto;
+7     struct frag_hdr *fptr;
+8     unsigned int unfrag_ip6hlen;
+9     unsigned int payload_len;
+12     bool encap, udpfrag;
+13     int nhoff;
+14     bool gso_partial;
+16     nhoff = skb_network_header(skb) - skb_mac_header(skb);
+21     encap = SKB_GSO_CB(skb)->encap_level > 0;
+22     if (encap)
+24         features &= skb->dev->hw_enc_features;
+26     SKB_GSO_CB(skb)->encap_level += sizeof(*ipv6h);
+27     ipv6h = ipv6_hdr(skb);
+29     segs = ERR_PTR(-EPROTONOSUPPORT);
+30     proto = ipv6_gso_pull_exthdrs(skb, ipv6h->nexthdr);
+31     if (skb->encapsulation && skb_shinfo(skb)->gso_type & (SKB_GSO_IPXIP4 | SKB_GSO_IPXIP6))
+33         udpfrag = proto == IPPROTO_UDP && encap;
+37         udpfrag = proto == IPPROTO_UDP && !skb->encapsulation;
+39     ops = rcu_dereference(inet6_offloads[proto]);
+40     if (likely(ops && ops->callbacks.gso_segment))
+43         segs = ops->callbacks.gso_segment(skb, features);
+49     gso_partial = !!(skb_shinfo(segs)->gso_type & SKB_GSO_PARTIAL);
+50     for (skb = segs; skb; skb = skb->next)
+52         ipv6h = (ipv6hdr *)(skb_mac_header(skb) + nhoff);
+53         if (gso_partial)
+55             payload_len = skb_shinfo(skb)->gso_size + SKB_GSO_CB(skb)->data_offset + skb->head - (unsigned char *)(ipv6h + 1);
+59             payload_len = skb->len - nhoff - sizeof(*ipv6h);
+61         ipv6h->payload_len = htons(payload_len);
+62         skb->network_header = (u8 *)ipv6h - skb->head;
+63         if (udpfrag)
+65             unfrag_ip6hlen = ip6_find_1stfragopt(skb, &prevhdr);
+66             fptr = (frag_hdr *)((u8 *)ipv6h + unfrag_ip6hlen);```
+which has a CWE-787 vulnerability at line:
+```
+66             fptr = (frag_hdr *)((u8 *)ipv6h + unfrag_ip6hlen);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the variable `unfrag_ip6hlen` may be less than 0 if `ip6_find_1stfragopt(skb, &prevhdr)` returns a negative value. When this happens, the pointer arithmetic in `fptr = (frag_hdr *)((u8 *)ipv6h + unfrag_ip6hlen);` will underflow the boundary, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the variable `unfrag_ip6hlen` cannot be less than 0. This can be done by adding a condition to check if `unfrag_ip6hlen` is less than 0 after calling `ip6_find_1stfragopt(skb, &prevhdr)`. If it is, return an error pointer immediately. Therefore the patch should be:
+```
+<             unfrag_ip6hlen = ip6_find_1stfragopt(skb, &prevhdr);
+<             fptr = (frag_hdr *)((u8 *)ipv6h + unfrag_ip6hlen);
+---
+>             unfrag_ip6hlen = ip6_find_1stfragopt(skb, &prevhdr);
+>             if (unfrag_ip6hlen < 0)
+>             {
+>                 return ERR_PTR(unfrag_ip6hlen);
+>             }
+>             fptr = (frag_hdr *)((u8 *)ipv6h + unfrag_ip6hlen);
+```
+
+
+Q: Given the following code slice:
+```
+1 static int xan_huffman_decode(unsigned char *dest, int dest_len, const unsigned char *src, int src_len)
+3     unsigned char byte = *src++;
+5     const unsigned char *ptr = src + byte * 2;
+6     int ptr_len = src_len - 1 - byte * 2;
+9     GetBitContext gb;
+10     init_get_bits(&gb, ptr, ptr_len * 8);```
+which has a CWE-787 vulnerability at line:
+```
+10     init_get_bits(&gb, ptr, ptr_len * 8);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the variable `ptr_len` may be less than 0. This can happen when `src_len` is less than or equal to `byte * 2 + 1`. When this happens, the `init_get_bits` function will write to memory with a negative length, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the variable `ptr_len` cannot be less than 0. This can be done by adding a condition to check if `ptr_len` is less than 0 before calling the `init_get_bits` function. If `ptr_len` is less than 0, the function should return an error instead of attempting to write to memory with a negative length. Therefore, the patch should be:
+```
+<     GetBitContext gb;
+<     init_get_bits(&gb, ptr, ptr_len * 8);
+---
+>     GetBitContext gb;
+>     if (ptr_len < 0)
+>     {
+>         return AVERROR_INVALIDDATA;
+>     }
+>     init_get_bits(&gb, ptr, ptr_len * 8);
+```
+
+
+Q: Given the following code slice:
+```
+1 static int dmxProcRenderSetPictureFilter(ClientPtr client)
+3     DMXScreenInfo *dmxScreen;
+4     PicturePtr pPicture;
+5     dmxPictPrivPtr pPictPriv;
+6     char *filter;
+7     XFixed *params;
+8     int nparams;
+12     dmxScreen = &dmxScreens[pPicture->pDrawable->pScreen->myNum];
+13     pPictPriv = DMX_GET_PICT_PRIV(pPicture);
+14     if (pPictPriv->pict)
+16         filter = (char *)(stuff + 1);
+17         params = (XFixed *)(filter + ((stuff->nbytes + 3) & ~3));
+18         nparams = ((XFixed *)stuff + client->req_len) - params;
+19         XRenderSetPictureFilter(dmxScreen->beDisplay, pPictPriv->pict, filter, params, nparams);```
+which has a CWE-787 vulnerability at line:
+```
+19         XRenderSetPictureFilter(dmxScreen->beDisplay, pPictPriv->pict, filter, params, nparams);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the variable `nparams` may be less than 0 if the calculation `((XFixed *)stuff + client->req_len) - params` results in a negative value. When this happens, the function `XRenderSetPictureFilter` will receive an invalid `nparams` value, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the variable `nparams` cannot be less than 0. This can be done by adding a condition to check if `nparams` is less than 0 before calling the `XRenderSetPictureFilter` function. If `nparams` is less than 0, return an error code `BadLength` to prevent the out-of-bounds write. Therefore, the patch should be:
+```
+<         nparams = ((XFixed *)stuff + client->req_len) - params;
+<         XRenderSetPictureFilter(dmxScreen->beDisplay, pPictPriv->pict, filter, params, nparams);
+---
+>         nparams = ((XFixed *)stuff + client->req_len) - params;
+>         if (nparams < 0)
+>         {
+>             return BadLength;
+>         }
+>         XRenderSetPictureFilter(dmxScreen->beDisplay, pPictPriv->pict, filter, params, nparams);
+```
+
+
+Q: Given the following code slice:
+```
+1 static int decode_dds1(GetByteContext *gb, uint8_t *frame, int width, int height)
+3     const uint8_t *frame_start = frame;
+4     const uint8_t *frame_end   = frame + width * height;
+5     int mask = 0x10000, bitbuf = 0;
+6     int i, v, offset, count, segments;
+8     segments = bytestream2_get_le16(gb);
+9     while (segments--) {
+10         if (bytestream2_get_bytes_left(gb) < 2)
+12         if (mask == 0x10000) {
+13             bitbuf = bytestream2_get_le16u(gb);
+14             mask = 1;
+17         if (bitbuf & mask) {
+18             v = bytestream2_get_le16(gb);
+19             offset = (v & 0x1FFF) << 2;
+20             count = ((v >> 13) + 2) << 1;
+21             if (frame - frame_start < offset || frame_end - frame < count*2 + width)
+23             for (i = 0; i < count; i++) {
+24                 frame[0] = frame[1] =
+27                 frame += 2;
+29         } else if (bitbuf & (mask << 1)) {
+30             v = bytestream2_get_le16(gb)*2;
+31             if (frame - frame_end < v)
+33             frame += v;
+35             if (frame_end - frame < width + 3)
+37             frame[0] = frame[1] =
+39             frame += 2;
+40             frame[0] = frame[1] =
+42             frame += 2;
+44         mask <<= 2;```
+which has a CWE-787 vulnerability at line:
+```
+40             frame[0] = frame[1] =
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-787 (out-of-bounds write) vulnerability exists in the code because the pointer `frame` may point to a location that is too close to the end of the `frame_end` boundary. When this happens, the buffer write to `frame` will overflow the boundary, causing an out-of-bounds write vulnerability, which is CWE-787.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the pointer `frame` cannot point to a location that is too close to the end of the `frame_end` boundary. This can be done by adding a condition in the if statement to avoid `frame` pointing to a location that is too close to the end of the `frame_end` boundary. Therefore the patch should be:
+```
+<             if (frame_end - frame < width + 3)
+---
+>             if (frame_end - frame < width + 4)
+```
+This patch ensures that there is enough space left in the `frame` buffer to perform the write operation safely, thus preventing the out-of-bounds write vulnerability.

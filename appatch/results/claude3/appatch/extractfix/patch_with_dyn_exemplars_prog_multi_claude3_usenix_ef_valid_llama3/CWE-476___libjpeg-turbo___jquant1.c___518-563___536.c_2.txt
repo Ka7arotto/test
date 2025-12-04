@@ -1,0 +1,16 @@
+
+< #define SAFE_JZERO(buf, row, width) jzero_far((void *) buf[row], (size_t) (width * sizeof(JSAMPLE)))
+< 
+<   for (row = 0; row < num_rows; row++) {
+<     /* Initialize output values to 0 so can process components separately */
+<     jzero_far((void *) output_buf[row], (size_t) (width * sizeof(JSAMPLE)));
+---
+> #define SAFE_JZERO(buf, row, width) do { \
+>   if (buf != NULL && buf[row] != NULL) { \
+>     jzero_far((void *) buf[row], (size_t) (width * sizeof(JSAMPLE))); \
+>   } \
+> } while(0)
+> 
+>   for (row = 0; row < num_rows; row++) {
+>     /* Initialize output values to 0 so can process components separately */
+>     SAFE_JZERO(output_buf, row, width);

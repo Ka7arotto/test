@@ -1,0 +1,62 @@
+Step 1:  root cause of the CWE-787 (Out-of-bounds Write) vulnerability in this code slice is:
+
+The loop condition and increment in the for loop allow 'i' to potentially exceed half the size of the destination buffer 'r', leading to an out-of-bounds write when 'memcpy' is called.
+
+Detailed explanation:
+
+1. The loop starts with i = 3 and doubles i in each iteration (i *= 2).
+2. The loop continues as long as i < size / 2.
+3. However, the last valid iteration could result in i being just below size / 2.
+4. In the memcpy call, 'i' is used both as the destination offset (r + i) and the number of bytes to copy.
+5. This can lead to writing beyond the bounds of 'r' when i approaches or exceeds size / 2.
+
+For example, if size = 100:
+- The last valid iteration might have i = 48 (next iteration would be 96, which exceeds size/2 = 50).
+- The memcpy call would then attempt to copy 48 bytes starting at index 48.
+- This would write up to index 95, which is beyond the allocated size of 'r'.
+
+To fix this, the code should ensure that the memcpy operation never writes beyond the bounds of 'r', possibly by adjusting the loop condition or adding a bounds check before the memcpy call.
+Step 2. Here are five possible patches for the vulnerability:
+
+Patch 1: Add a bounds check before memcpy
+```
+<     memcpy (r + i, r, i);
+---
+>     if (i * 2 <= size) {
+>         memcpy (r + i, r, i);
+>     }
+```
+
+Patch 2: Modify the loop condition to prevent overflow
+```
+<   for (i = 3; i < size / 2; i *= 2)
+---
+>   for (i = 3; i < size / 2 && i * 2 <= size; i *= 2)
+```
+
+Patch 3: Use the minimum of 'i' and remaining space
+```
+<     memcpy (r + i, r, i);
+---
+>     size_t remaining = size - i;
+>     memcpy (r + i, r, (i < remaining) ? i : remaining);
+```
+
+Patch 4: Break the loop if next iteration would overflow
+```
+<   for (i = 3; i < size / 2; i *= 2)
+---
+>   for (i = 3; i < size / 2; i *= 2) {
+>     if (i * 2 > size) break;
+```
+
+Patch 5: Use a safer memory copy function with size check
+```
+<     memcpy (r + i, r, i);
+---
+>     if (i <= size - i) {
+>         memmove(r + i, r, i);
+>     }
+```
+
+These patches address the vulnerability by ensuring that the memory copy operation does not exceed the bounds of the destination buffer 'r'.

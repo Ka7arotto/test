@@ -1,0 +1,33 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate `buf`:
+  - `buf` is obtained from `kzalloc(size, GFP_KERNEL)`. We need to consider what values `buf` might take.
+  - If `kzalloc` fails to allocate memory, it will return `NULL`.
+
+- 2: Usage of `buf`:
+  - The code uses `buf` without checking if it's `NULL`.
+  - If `buf` is `NULL`, then `buf[x] = cpu_to_le16(thresholds[y * SOLO_MOTION_SZ + x]);` will result in a null pointer dereference.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `buf` is `NULL`, which results in a null pointer dereference.
+  - This is a classic example of a null pointer dereference vulnerability. Dereferencing a null pointer can lead to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `buf` is `NULL` before using it. If `kzalloc` fails to allocate memory, `buf` will be `NULL`, and the code will crash or become exploitable when trying to access `buf[x]`. Proper error checking should be added to ensure `buf` is not `NULL` before using it.
+
+### Step 2. Fixing Strategy:
+A common fixing strategy is to add error checking to ensure that `buf` is not `NULL` before using it. This can be done by adding a condition to check if `buf` is `NULL` after the `kzalloc` call. If `buf` is `NULL`, the function should return an error code to indicate that the memory allocation failed. Therefore, the patch should be:
+```
+<     buf = kzalloc(size, GFP_KERNEL);
+<     for (y = 0; y < SOLO_MOTION_SZ; y++)
+---
+>     buf = kzalloc(size, GFP_KERNEL);
+>     if (buf == NULL)
+>     {
+>         return -ENOMEM;
+>     }
+>     for (y = 0; y < SOLO_MOTION_SZ; y++)
+```
+This patch adds a check to ensure that `buf` is not `NULL` before using it, preventing the null pointer dereference vulnerability.

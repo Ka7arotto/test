@@ -1,0 +1,53 @@
+## Reasoning Steps for Patching CWE-787 in `ib_uverbs_ex_create_flow`
+
+Here's a breakdown of the reasoning behind the patch for the provided code snippet:
+
+**Step 1: Root Cause Analysis**
+
+- **Vulnerable Function:** `ib_copy_from_udata(&cmd, ucore, sizeof(cmd))`
+  - This function copies data from a user-space buffer (`ucore`) to a kernel-space buffer (`cmd`). The size of the data to be copied is specified by `sizeof(cmd)`.
+
+- **Input Validation:** The original code checks if `ucore->outlen` (size of the output buffer in user-space) is less than `sizeof(resp)`. This check doesn't directly address the potential vulnerability.
+
+- **Missing Check:** The code **doesn't validate** if `ucore->inlen` (size of the input buffer in user-space) is large enough to hold the data being copied (`sizeof(cmd)`). 
+
+- **Potential Vulnerability:** If `sizeof(cmd)` is larger than `ucore->inlen`, the `ib_copy_from_udata` function will read past the end of the user-space buffer (`ucore`), leading to a buffer overflow. This could crash the kernel or potentially allow an attacker to execute arbitrary code.
+
+**Step 2: Fixing Strategy**
+
+- **Add Input Validation:** The key fix is to ensure that the size of the data being copied from the user-space buffer (`sizeof(cmd)`) doesn't exceed the size of the provided buffer (`ucore->inlen`).
+
+- **Early Return on Error:**  If the validation fails (input buffer too small), the function should return an error (`-EINVAL`) to prevent the copy operation.
+
+**Patch Explanation**
+
+```diff
+--- a/drivers/infiniband/ulp/uverbs/ex/uverbs_ex.c
++++ b/drivers/infiniband/ulp/uverbs/ex/uverbs_ex.c
+@@ -14,16 +14,17 @@ int ib_uverbs_ex_create_flow(struct ib_uverbs_file *file, struct ib_udata *ucore, struct ib_udata *uhw)
+      */
+      int i;
+ -    if (ucore->outlen < sizeof(resp))
++    if (ucore->inlen < sizeof(cmd))
++    {
++        return -EINVAL;
++    }
++    if (ucore->outlen < sizeof(resp))
+ 
+      err = ib_copy_from_udata(&cmd, ucore, sizeof(cmd));
+      if (err)
+          return err;
+ 
+```
+
+**How the Patch Works:**
+
+1. **Input Size Check:** The added `if (ucore->inlen < sizeof(cmd))` statement verifies that the input buffer (`ucore`) is large enough to store the data being copied (`sizeof(cmd)`). 
+
+2. **Error Handling:** If the input buffer is too small, the function immediately returns an error code (`-EINVAL`), preventing the dangerous copy operation.
+
+3. **Original Check Remains:** The original check `if (ucore->outlen < sizeof(resp))`  remains to ensure the output buffer is also sufficiently sized.
+
+**Conclusion:**
+
+By adding a simple input validation check before calling `ib_copy_from_udata`, the patch effectively prevents the buffer overflow vulnerability and enhances the security of the code. 

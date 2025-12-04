@@ -1,0 +1,153 @@
+Step 1:  CWE-190 vulnerability at line 28 is caused by the use of the `atoi` function to convert the string `optarg` to an integer. 
+
+The `atoi` function does not perform any error checking on the input string. If the string cannot be converted to an integer (for example, if it contains non-numeric characters), `atoi` will return 0. However, it does not provide any indication that an error occurred.
+
+In this specific case, if the user provides an invalid argument for the option that corresponds to `horizSubSampling`, `atoi` will silently return 0, potentially causing the program to behave unexpectedly or produce incorrect results.
+
+Furthermore, if the input string represents a number that is outside the range of `int`, `atoi` will also return an incorrect result, potentially causing the program to behave unexpectedly or produce incorrect results.
+
+To fix this vulnerability, you should use a safer function like `strtol` or `strtod` that provides error checking and allows you to handle invalid input. Here is an example of how you can use `strtol` to fix the vulnerability:
+
+```c
+#include <stdlib.h>
+#include <errno.h>
+
+// ...
+
+long value;
+char *endptr;
+
+errno = 0;
+value = strtol(optarg, &endptr, 10);
+
+if (endptr == optarg) {
+    // No digits were found in the input string
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+if (errno == ERANGE) {
+    // The input string represents a number that is outside the range of long
+    fprintf(stderr, "Argument for option is out of range: %s\n", optarg);
+    exit(1);
+}
+
+if (*endptr != '\0') {
+    // The input string contains non-numeric characters
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+horizSubSampling = (int)value;
+```
+
+This code checks for errors when converting the input string to an integer and handles invalid input by printing an error message and exiting the program.
+Here are five possible patches for the CWE-190 vulnerability:
+
+**Patch 1: Using `strtol` with error checking**
+```c
+long value;
+char *endptr;
+
+errno = 0;
+value = strtol(optarg, &endptr, 10);
+
+if (endptr == optarg) {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+if (errno == ERANGE) {
+    fprintf(stderr, "Argument for option is out of range: %s\n", optarg);
+    exit(1);
+}
+
+if (*endptr != '\0') {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+horizSubSampling = (int)value;
+```
+
+**Patch 2: Using `strtod` with error checking**
+```c
+double value;
+char *endptr;
+
+errno = 0;
+value = strtod(optarg, &endptr);
+
+if (endptr == optarg) {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+if (errno == ERANGE) {
+    fprintf(stderr, "Argument for option is out of range: %s\n", optarg);
+    exit(1);
+}
+
+if (*endptr != '\0') {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+horizSubSampling = (int)value;
+```
+
+**Patch 3: Using `sscanf` with error checking**
+```c
+int value;
+if (sscanf(optarg, "%d", &value) != 1) {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+horizSubSampling = value;
+```
+
+**Patch 4: Using `strtol` with error checking and range checking**
+```c
+long value;
+char *endptr;
+
+errno = 0;
+value = strtol(optarg, &endptr, 10);
+
+if (endptr == optarg) {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+if (errno == ERANGE) {
+    fprintf(stderr, "Argument for option is out of range: %s\n", optarg);
+    exit(1);
+}
+
+if (*endptr != '\0') {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+if (value < INT_MIN || value > INT_MAX) {
+    fprintf(stderr, "Argument for option is out of range: %s\n", optarg);
+    exit(1);
+}
+
+horizSubSampling = (int)value;
+```
+
+**Patch 5: Using a third-party library like `libbsd` with `strtonum`**
+```c
+#include <bsd/stdlib.h>
+
+int value;
+if (strtonum(optarg, 0, INT_MAX, &value) != 0) {
+    fprintf(stderr, "Invalid argument for option: %s\n", optarg);
+    exit(1);
+}
+
+horizSubSampling = value;
+```
+Note that each patch has its own trade-offs and considerations. For example, `strtol` and `strtod` provide more flexibility in terms of error handling, while `sscanf` is simpler to use but may not provide the same level of error checking. The `libbsd` library provides a convenient `strtonum` function, but it may not be available on all platforms.

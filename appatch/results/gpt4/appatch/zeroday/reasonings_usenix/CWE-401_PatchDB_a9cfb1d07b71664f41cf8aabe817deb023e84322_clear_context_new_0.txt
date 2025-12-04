@@ -1,0 +1,73 @@
+To generate the patch for the given code slice, we need to follow a structured approach to identify the root cause of the vulnerability and then apply an appropriate fix. Here are the detailed reasoning steps:
+
+### Step 1: Root Cause Analysis
+
+1. **Memory Allocation:**
+   - At line 4, memory is allocated for `clear` using `calloc`.
+   - `calloc` initializes the allocated memory to zero and returns a pointer to the allocated memory.
+
+2. **Conditional Check:**
+   - At line 5, there is a check to see if the memory allocation was successful (`if (clear)`).
+
+3. **Nested Memory Allocation:**
+   - At line 8, another memory allocation is performed by calling `nsc_context_new()`, which presumably allocates memory for `clear->nsc`.
+
+4. **Failure Handling:**
+   - At line 9, there is a check to see if the allocation for `clear->nsc` was successful (`if (!clear->nsc)`).
+   - If the allocation fails, the function returns `NULL` at line 11.
+
+### Identifying the Vulnerability
+
+- **Memory Leak:**
+  - If the allocation for `clear->nsc` fails, the function returns `NULL` without freeing the previously allocated memory for `clear`.
+  - This results in a memory leak because the memory allocated at line 4 is not freed before returning.
+
+### Step 2: Fixing Strategy
+
+To fix the memory leak, we need to ensure that any allocated memory is properly freed before returning from the function in case of an error. Specifically, if the allocation for `clear->nsc` fails, we should free the memory allocated for `clear` before returning `NULL`.
+
+### Applying the Fix
+
+The fix involves adding a call to `free(clear)` before returning `NULL` at line 11. Here is the modified code with the patch applied:
+
+```diff
+<         {
+<             return NULL;
+---
+>         {
+>             free(clear);
+>             return NULL;
+```
+
+### Conclusion
+
+By adding the `free(clear);` statement before returning `NULL`, we ensure that the memory allocated for `clear` is properly freed in case of an error, thus preventing a memory leak. This addresses the CWE-401 (Memory Leak) vulnerability in the code.
+
+### Final Patched Code
+
+Here is the final patched version of the code:
+
+```c
+1 CLEAR_CONTEXT *clear_context_new(BOOL Compressor)
+2 {
+3     CLEAR_CONTEXT *clear;
+4     clear = (CLEAR_CONTEXT *)calloc(1, sizeof(CLEAR_CONTEXT));
+5     if (clear)
+6     {
+7         clear->Compressor = Compressor;
+8         clear->nsc = nsc_context_new();
+9         if (!clear->nsc)
+10         {
+11             free(clear);
+12             return NULL;
+13         }
+14         nsc_context_set_pixel_format(clear->nsc, RDP_PIXEL_FORMAT_R8G8B8);
+15         clear->TempSize = 512 * 512 * 4;
+16         clear->TempBuffer = (BYTE *)malloc(clear->TempSize);
+17         clear_context_reset(clear);
+18     }
+19     return clear;
+20 }
+```
+
+This ensures that the memory allocated for `clear` is properly freed if the allocation for `clear->nsc` fails, thus preventing a memory leak.

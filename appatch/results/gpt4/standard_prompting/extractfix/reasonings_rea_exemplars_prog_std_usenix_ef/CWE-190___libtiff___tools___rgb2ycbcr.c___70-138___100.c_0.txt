@@ -1,0 +1,20 @@
+The CWE-190 vulnerability refers to "Divide By Zero." This type of vulnerability occurs when a program performs a division operation where the divisor can be zero, leading to a crash or other unintended behavior.
+
+In the provided code snippet, the vulnerability is identified at line 28:
+```c
+28 horizSubSampling = atoi(optarg);
+```
+Here, the function `atoi()` is used to convert the string `optarg` (which is an external input obtained via command-line arguments) into an integer, which is then assigned to `horizSubSampling`.
+
+The root cause of the vulnerability is that the value of `optarg` is directly converted to an integer and assigned to `horizSubSampling` without any checks to ensure that the value is not zero. If `horizSubSampling` is later used as a divisor in a division operation elsewhere in the program, and if it is zero, it will lead to a divide-by-zero error.
+
+To mitigate this vulnerability, it is crucial to validate `optarg` before converting it to an integer and ensure that it is not zero if it is going to be used in a division operation. Here is an example of how you might modify the code to prevent this issue:
+```c
+28 int temp = atoi(optarg);
+29 if (temp == 0) {
+30     fprintf(stderr, "Error: Zero is not a valid value for horizSubSampling.\n");
+31     exit(EXIT_FAILURE);
+32 }
+33 horizSubSampling = temp;
+```
+This modification checks if the converted integer `temp` is zero. If it is, the program prints an error message and exits. Otherwise, it proceeds to assign the value to `horizSubSampling`. This prevents any subsequent divide-by-zero errors involving `horizSubSampling`.

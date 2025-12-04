@@ -1,0 +1,101 @@
+Here are five possible code completions for the given function, addressing the CWE-787 vulnerability:
+
+1. Add bounds checking before writing to frame:
+
+    while (frame < frame_end) {
+        if (mask == 0x10000) {
+            bitbuf = bytestream2_get_le16(gb);
+            mask = 1;
+        }
+        if (bitbuf & mask) {
+            v = bytestream2_get_byte(gb);
+            if (frame + v <= frame_end)
+                memset(frame, v, v);
+            frame += v;
+        } else {
+            *frame++ = bytestream2_get_byte(gb);
+        }
+        mask <<= 1;
+    }
+
+2. Use a separate counter to track remaining space:
+
+    int remaining = width * height;
+    while (remaining > 0) {
+        if (mask == 0x10000) {
+            bitbuf = bytestream2_get_le16(gb);
+            mask = 1;
+        }
+        if (bitbuf & mask) {
+            v = bytestream2_get_byte(gb);
+            count = FFMIN(v, remaining);
+            memset(frame, v, count);
+            frame += count;
+            remaining -= count;
+        } else {
+            *frame++ = bytestream2_get_byte(gb);
+            remaining--;
+        }
+        mask <<= 1;
+    }
+
+3. Implement a safety check before each write operation:
+
+    while (frame < frame_end) {
+        if (mask == 0x10000) {
+            bitbuf = bytestream2_get_le16(gb);
+            mask = 1;
+        }
+        if (bitbuf & mask) {
+            v = bytestream2_get_byte(gb);
+            count = FFMIN(v, frame_end - frame);
+            if (count > 0) {
+                memset(frame, v, count);
+                frame += count;
+            }
+        } else if (frame < frame_end) {
+            *frame++ = bytestream2_get_byte(gb);
+        }
+        mask <<= 1;
+    }
+
+4. Use a do-while loop with early exit condition:
+
+    do {
+        if (mask == 0x10000) {
+            bitbuf = bytestream2_get_le16(gb);
+            mask = 1;
+        }
+        if (bitbuf & mask) {
+            v = bytestream2_get_byte(gb);
+            count = FFMIN(v, frame_end - frame);
+            memset(frame, v, count);
+            frame += count;
+        } else {
+            if (frame >= frame_end) break;
+            *frame++ = bytestream2_get_byte(gb);
+        }
+        mask <<= 1;
+    } while (frame < frame_end);
+
+5. Implement segment-based decoding with bounds checking:
+
+    segments = width * height / 16;
+    for (i = 0; i < segments && frame < frame_end; i++) {
+        if (mask == 0x10000) {
+            bitbuf = bytestream2_get_le16(gb);
+            mask = 1;
+        }
+        if (bitbuf & mask) {
+            v = bytestream2_get_byte(gb);
+            count = FFMIN(v, frame_end - frame);
+            memset(frame, v, count);
+            frame += count;
+        } else {
+            count = FFMIN(16, frame_end - frame);
+            for (offset = 0; offset < count; offset++)
+                frame[offset] = bytestream2_get_byte(gb);
+            frame += count;
+        }
+        mask <<= 1;
+    }

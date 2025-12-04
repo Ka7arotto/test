@@ -1,0 +1,1 @@
+static const xmlChar * htmlParseNameComplex ( xmlParserCtxtPtr ctxt ) { int len = 0 , l ; int c ; long count = 0 ;   } Handler for more complex cases*/ 

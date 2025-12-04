@@ -1,0 +1,96 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 int
+2 main (int argc, char **argv)
+3 {
+4   int limit;
+5 
+6   char *sieve;
+7   size_t size, i;
+8 
+9   struct prime *prime_list;
+10   unsigned nprimes;
+11 
+12   if (argc != 2)
+13     {
+14       fprintf (stderr, "Usage: %s LIMIT\n"
+15                "Produces a list of odd primes <= LIMIT\n", argv[0]);
+16       return EXIT_FAILURE;
+17     }
+18   limit = atoi (argv[1]);
+19   if (limit < 3)
+20     return EXIT_SUCCESS;
+21 
+22   /* Make limit odd */
+23   if ( !(limit & 1))
+24     limit--;
+25 
+26   size = (limit-1)/2;
+27   /* sieve[i] represents 3+2*i */
+28   sieve = xalloc (size);
+29   memset (sieve, 1, size);
+30 
+31   prime_list = xalloc (size * sizeof (*prime_list));
+32   nprimes = 0;
+33 
+34   for (i = 0; i < size;)
+35     {
+36       unsigned p = 3+2*i;
+37       unsigned j;
+38 
+39       process_prime (&prime_list[nprimes++], p);
+40 
+41       for (j = (p*p - 3)/2; j < size; j+= p)
+42         sieve[j] = 0;
+43 
+44       while (i < size && sieve[++i] == 0)
+45         ;
+46     }
+47 
+48   output_primes (prime_list, nprimes);
+49 
+50   if (ferror (stdout) + fclose (stdout))
+51     {
+52       fprintf (stderr, "write error: %s\n", strerror (errno));
+53       return EXIT_FAILURE;
+54     }
+55 
+56   return EXIT_SUCCESS;
+57 }
+```
+which has a CWE-125 vulnerability at line:
+```
+44       while (i < size && sieve[++i] == 0)
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

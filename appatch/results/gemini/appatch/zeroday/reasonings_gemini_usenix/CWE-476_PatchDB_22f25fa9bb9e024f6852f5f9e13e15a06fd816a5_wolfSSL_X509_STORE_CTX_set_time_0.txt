@@ -1,0 +1,44 @@
+## Reasoning Steps for Patching CWE-476 in wolfSSL_X509_STORE_CTX_set_time
+
+**Step 1. Root Cause Analysis:**
+
+1. **Null Pointer Dereference Risk:** The code directly accesses `ctx->param->check_time` without checking if `ctx` or `ctx->param` are valid (non-null) pointers. 
+
+2. **CWE-476 (NULL Pointer Dereference):** This direct access without a null check creates a vulnerability where the code could attempt to dereference a null pointer. If `ctx` or `ctx->param` happen to be null, the program would crash due to a segmentation fault.
+
+**Step 2. Fixing Strategy:**
+
+1. **Null Check:** To prevent the null pointer dereference, we need to add a check to ensure that both `ctx` and `ctx->param` are not null before accessing `check_time`.
+
+2. **Early Return:** If either `ctx` or `ctx->param` is null, the function should return to prevent further execution and potential crashes. This can be achieved using an `if` statement to check for null values and a `return` statement to exit the function if necessary.
+
+**Patch Explanation:**
+
+```diff
+--- a/wolfssl/src/tls/wolfssl_tls.c
++++ b/wolfssl/src/tls/wolfssl_tls.c
+@@ -1663,8 +1663,12 @@ void wolfSSL_X509_STORE_CTX_set_time(WOLFSSL_X509_STORE_CTX *ctx, unsigned lon
+     if (ctx == NULL || ctx->param == NULL) {
+         return;
+     }
+-    (void)flags;
+-    ctx->param->check_time = t;
++    if (ctx == NULL)
++    {
++        return;
++    }
++    ctx->param->check_time = t; 
+ }
+ 
+ #endif /* !NO_CRYPT_HASH */
+
+```
+
+- **`(void)flags;`**: This line remains unchanged as the `flags` parameter is unused in the original and patched code.
+- **`if (ctx == NULL)`**: This condition checks if the pointer `ctx` is null.
+- **`return;`**: If `ctx` is null, the function immediately returns, preventing further execution and the potential null pointer dereference.
+- **`ctx->param->check_time = t;`**: This line, now protected by the null check, sets the value of `check_time` only if `ctx` is not null.
+
+**Conclusion:**
+
+By adding a null check for `ctx` before accessing `ctx->param->check_time`, the patch effectively mitigates the CWE-476 (NULL Pointer Dereference) vulnerability. The function now gracefully handles situations where `ctx` might be null, preventing crashes and improving the code's robustness. 

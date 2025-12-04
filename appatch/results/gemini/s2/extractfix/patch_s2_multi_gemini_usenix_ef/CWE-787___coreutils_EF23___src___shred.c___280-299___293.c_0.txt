@@ -1,0 +1,127 @@
+## CWE-787: Out-of-bounds Write
+
+The provided code snippet has a potential out-of-bounds write vulnerability (CWE-787) if the value of `size` is larger than the allocated memory for `r`. The loop iterates `size` times, potentially writing beyond the bounds of `r` if `size` is too large.
+
+Here are five possible code completions that address this vulnerability:
+
+### 1. Check `size` against a maximum allowed value:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i;
+  unsigned int bits = type & 0xfff;
+
+  // Define a maximum allowed size
+  const size_t MAX_SIZE = 1024;
+
+  // Check if size is within bounds
+  if (size > MAX_SIZE) {
+    // Handle the error appropriately (e.g., log, return error code)
+    return; 
+  }
+
+  // Safe loop execution
+  for (i = 0; i < size; i++) {
+    // ... rest of the loop logic
+  }
+}
+```
+
+This approach ensures `size` doesn't exceed a predefined limit, preventing out-of-bounds writes.
+
+### 2. Use `memcpy_s` with size check:
+
+```c
+#include <string.h>
+
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  unsigned int bits = type & 0xfff;
+
+  // Calculate the size for pattern filling, limiting to available space
+  size_t safe_size = (size < sizeof(r)) ? size : sizeof(r);
+
+  // Use memcpy_s for safe memory copy
+  if (memcpy_s(r, safe_size, &bits, sizeof(bits)) != 0) {
+    // Handle the error appropriately 
+    return;
+  }
+
+  // ... rest of the function logic
+}
+```
+
+This method utilizes `memcpy_s`, which performs bounds checking and prevents buffer overflows. It limits the copied size to the smaller value between `size` and the actual size of `r`.
+
+### 3. Validate `size` against allocated memory:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i;
+  unsigned int bits = type & 0xfff;
+
+  // Assuming r points to a dynamically allocated block:
+  size_t allocated_size = // ... retrieve allocated size for 'r'
+
+  // Check if size is within the allocated memory bounds
+  if (size > allocated_size) {
+    // Handle the error appropriately (e.g., log, return error code)
+    return;
+  }
+
+  // Safe loop execution
+  for (i = 0; i < size; i++) {
+    // ... rest of the loop logic
+  }
+}
+```
+
+This approach relies on knowing the allocated size for `r`, requiring additional information about memory management. It ensures that `size` stays within the bounds of the allocated memory.
+
+### 4. Use a safer loop construct:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  unsigned int bits = type & 0xfff;
+
+  // Iterate using pointer arithmetic, checking for end of buffer
+  for (unsigned char *p = r; p < r + size && p < r + sizeof(r); p++) {
+    *p = (unsigned char)bits;
+    bits >>= 8; // Example pattern logic
+  }
+}
+```
+
+This approach iterates through the buffer using pointer arithmetic while ensuring that the pointer stays within the bounds of `r` and doesn't exceed its allocated size.
+
+### 5. Redesign the function with clear memory ownership:
+
+```c
+static void
+fillpattern (int type, unsigned char *buffer, size_t buffer_size)
+{
+  // Assert buffer is valid and buffer_size is not zero
+  assert(buffer != NULL);
+  assert(buffer_size > 0);
+
+  // Calculate the safe size for pattern filling
+  size_t safe_size = (buffer_size < sizeof(unsigned int)) ? buffer_size : sizeof(unsigned int);
+
+  // Fill the buffer with the pattern
+  unsigned int bits = type & 0xfff;
+  for (size_t i = 0; i < safe_size; i++) {
+    buffer[i] = (unsigned char)(bits >> (i * 8));
+  }
+}
+```
+
+This approach redefines the function to clearly take the buffer and its size as arguments. It uses assertions to ensure valid input and calculates a safe size for pattern filling within the provided buffer bounds.
+
+These are just a few examples, and the best solution depends on the specific context of your application. The key is to implement proper bounds checking and ensure that `size` never exceeds the allocated memory for `r`, preventing potential out-of-bounds write vulnerabilities.

@@ -1,0 +1,108 @@
+Step 1:  CWE-190 vulnerability (Integer Overflow) at line 47 stems from the multiplication of `dec->numhtiles` and `dec->numvtiles` to calculate `dec->numtiles`. Here's a step-by-step analysis:
+
+1. **Input:** The vulnerability is triggered by the input values `siz->tilewidth` and `siz->tileheight`, which determine the tile dimensions. 
+
+2. **Intermediate Calculations:**
+   - **Line 45:** `dec->numhtiles` is calculated as `JPC_CEILDIV(dec->xend - dec->tilexoff, dec->tilewidth)`. 
+   - **Line 46:** `dec->numvtiles` is calculated as `JPC_CEILDIV(dec->yend - dec->tileyoff, dec->tileheight)`. 
+
+3. **Vulnerable Calculation:**
+   - **Line 47:** `dec->numtiles` is assigned the result of `dec->numhtiles * dec->numvtiles`. 
+
+4. **Potential Integer Overflow:**
+   - If the values of `dec->numhtiles` and `dec->numvtiles` are large enough, their multiplication can exceed the maximum value representable by the data type used for `dec->numtiles`. This leads to an integer overflow, where the result wraps around to a negative or unexpected value.
+
+5. **Consequences:**
+   - An incorrect value for `dec->numtiles` could cause a number of issues:
+     - **Memory Allocation Errors:**  Line 50 allocates memory for `dec->tiles` based on `dec->numtiles`. If the calculated value is incorrect, the allocation could be too small or too large, leading to buffer overflows or memory leaks.
+     - **Incorrect Loop Bounds:** The loop on lines 54-89 iterates based on `dec->numtiles`. An incorrect value could cause the loop to terminate prematurely or run out of bounds, leading to undefined behavior.
+     - **Logical Errors:**  Other parts of the code might rely on the correct value of `dec->numtiles` for calculations or decisions. An overflowed value could cause unexpected and potentially harmful logic errors.
+
+**In Summary:**
+
+The vulnerability arises from the possibility that the multiplication of `dec->numhtiles` and `dec->numvtiles` might exceed the maximum value representable by the data type. This could lead to an integer overflow, resulting in incorrect values for `dec->numtiles` and potentially causing memory allocation errors, incorrect loop bounds, and logical errors in subsequent code execution. 
+
+To mitigate this vulnerability, it is necessary to ensure that the data type used for `dec->numtiles` is large enough to accommodate the potential values of `dec->numhtiles * dec->numvtiles`, or to add checks before the multiplication to prevent overflow. 
+
+```diff
+--- a/jpc_dec.c
++++ b/jpc_dec.c
+@@ -47,7 +47,7 @@
+ 47 	dec->numtiles = dec->numhtiles * dec->numvtiles;
+ 48 	JAS_DBGLOG(10, ("numtiles = %d; numhtiles = %d; numvtiles = %d;\n",
+ 49 	  dec->numtiles, dec->numhtiles, dec->numvtiles));
+-50 	if (!(dec->tiles = jas_alloc2(dec->numtiles, sizeof(jpc_dec_tile_t)))) {
++50 	if (!(dec->tiles = jas_alloc2((size_t)dec->numtiles, sizeof(jpc_dec_tile_t)))) {
+ 51 		return -1;
+ 52 	}
+ 53 
+
+```
+B:
+```diff
+--- a/jpc_dec.c
++++ b/jpc_dec.c
+@@ -47,7 +47,7 @@
+ 47 	dec->numtiles = dec->numhtiles * dec->numvtiles;
+ 48 	JAS_DBGLOG(10, ("numtiles = %d; numhtiles = %d; numvtiles = %d;\n",
+ 49 	  dec->numtiles, dec->numhtiles, dec->numvtiles));
+-50 	if (!(dec->tiles = jas_alloc2(dec->numtiles, sizeof(jpc_dec_tile_t)))) {
++50 	if (!(dec->tiles = jas_alloc2((size_t)dec->numtiles, sizeof(jpc_dec_tile_t)))) {
+ 51 		return -1;
+ 52 	}
+ 53 
+
+```
+C:
+```diff
+--- a/jpc_dec.c
++++ b/jpc_dec.c
+@@ -44,7 +44,7 @@
+ 45 	dec->numhtiles = JPC_CEILDIV(dec->xend - dec->tilexoff, dec->tilewidth);
+ 46 	dec->numvtiles = JPC_CEILDIV(dec->yend - dec->tileyoff, dec->tileheight);
+ 47 	dec->numtiles = dec->numhtiles * dec->numvtiles;
+-48 	JAS_DBGLOG(10, ("numtiles = %d; numhtiles = %d; numvtiles = %d;\n",
++48 	JAS_DBGLOG(10, ("numtiles = %zu; numhtiles = %zu; numvtiles = %zu;\n",
+ 49 	  dec->numtiles, dec->numhtiles, dec->numvtiles));
+ 50 	if (!(dec->tiles = jas_alloc2((size_t)dec->numtiles, sizeof(jpc_dec_tile_t)))) {
+ 51 		return -1;
+@@ -96,6 +96,7 @@
+ 96 	dec->state = JPC_MH;
+ 97 
+ 98 	return 0;
++
+ 99 }
+ ```
+ D:
+```diff
+--- a/jpc_dec.c
++++ b/jpc_dec.c
+@@ -43,8 +43,9 @@
+ 44 
+ 45 	dec->numhtiles = JPC_CEILDIV(dec->xend - dec->tilexoff, dec->tilewidth);
+ 46 	dec->numvtiles = JPC_CEILDIV(dec->yend - dec->tileyoff, dec->tileheight);
+-47 	dec->numtiles = dec->numhtiles * dec->numvtiles;
+-48 	JAS_DBGLOG(10, ("numtiles = %zu; numhtiles = %zu; numvtiles = %zu;\n",
++	if (dec->numhtiles > INT_MAX / dec->numvtiles) {
++		return -1;
++	}
+ 49 	  dec->numtiles, dec->numhtiles, dec->numvtiles));
+ 50 	if (!(dec->tiles = jas_alloc2((size_t)dec->numtiles, sizeof(jpc_dec_tile_t)))) {
+ 51 		return -1;
+
+```
+E:
+```diff
+--- a/jpc_dec.c
++++ b/jpc_dec.c
+@@ -43,7 +43,7 @@
+ 44 
+ 45 	dec->numhtiles = JPC_CEILDIV(dec->xend - dec->tilexoff, dec->tilewidth);
+ 46 	dec->numvtiles = JPC_CEILDIV(dec->yend - dec->tileyoff, dec->tileheight);
+-	if (dec->numhtiles > INT_MAX / dec->numvtiles) {
++	if ((unsigned int)dec->numhtiles * dec->numvtiles > (unsigned int)INT_MAX) {
+ 		return -1;
+ 	}
+ 48 	JAS_DBGLOG(10, ("numtiles = %zu; numhtiles = %zu; numvtiles = %zu;\n",
+
+```

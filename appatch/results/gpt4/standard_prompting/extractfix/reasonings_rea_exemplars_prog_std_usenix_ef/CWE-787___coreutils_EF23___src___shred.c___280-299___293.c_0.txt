@@ -1,0 +1,25 @@
+The CWE-787 vulnerability, also known as "Out-of-bounds Write," occurs when the program writes data past the end, or before the beginning, of the intended buffer. This can lead to data corruption, crashes, and can be exploited for arbitrary code execution or bypassing security mechanisms.
+
+In the provided code snippet, the function `fillpattern` is designed to fill a pattern into a buffer `r` of size `size` using a loop and `memcpy`. The vulnerability specifically arises from how the `memcpy` function is used within the loop:
+
+```c
+for (i = 3; i < size / 2; i *= 2)
+    memcpy (r + i, r, i);
+```
+
+Here's a breakdown of the issue:
+
+1. **Loop Condition and Multiplication**: The loop starts with `i = 3` and in each iteration, `i` is doubled (`i *= 2`). The loop continues as long as `i < size / 2`.
+
+2. **Memcpy Usage**: Inside the loop, `memcpy` is used to copy `i` bytes from the start of the buffer `r` to the position starting at `r + i`. 
+
+3. **Potential Out-of-bounds Write**:
+   - As `i` doubles each time, the amount of data being copied also doubles.
+   - The destination of `memcpy` (`r + i`) moves further out in the buffer in each iteration.
+   - The critical issue arises when considering the end condition of the loop and the amount of data being copied. If `i` is close to `size / 2`, then `i` bytes are being copied to a position starting at `r + i`. This means the copying might extend beyond `r + size`, which is the boundary of the buffer.
+
+   For example, if `size` is 100, then when `i` reaches 32 (the largest power of 2 less than 50), `memcpy` will attempt to copy 32 bytes starting at position `r + 32`. This copying will attempt to access memory up to `r + 64`, which is beyond `size / 2` and potentially beyond `size` if not handled correctly.
+
+4. **Lack of Boundary Check**: There is no explicit check to ensure that the memory area from `r + i` to `r + i + i` (the area being written to) is within the bounds of the allocated memory `r` of size `size`. This can lead to an out-of-bounds write, especially in the last iterations of the loop.
+
+To mitigate this vulnerability, the code should include a check to ensure that the destination range of the `memcpy` does not exceed the buffer size. This can be done by adjusting the loop condition or adding a conditional statement inside the loop to verify that `i + i <= size` before performing the `memcpy`.

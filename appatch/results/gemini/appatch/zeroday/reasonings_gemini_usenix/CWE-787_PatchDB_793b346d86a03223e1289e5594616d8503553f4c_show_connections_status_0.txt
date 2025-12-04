@@ -1,0 +1,41 @@
+## Reasoning for Patching CWE-787 in `show_connections_status`
+
+Here's a breakdown of the vulnerability and the reasoning behind the patch:
+
+**Step 1. Root Cause Analysis:**
+
+1. **Purpose of the Code:** This code snippet appears to iterate through a linked list of `connection` structures (`connections`) and aims to create an array (`array`) containing pointers to each connection in the list.
+
+2. **Counting Elements:** The loop from lines 7-9 iterates through the linked list and increments the `count` variable for each connection found. This aims to determine the total number of connections.
+
+3. **Memory Allocation:** Line 11 attempts to allocate memory for the `array`. It uses `count` to allocate space for a specific number of `connection` pointers.
+
+4. **The Vulnerability: CWE-787 (Out-of-Bounds Write):** The vulnerability arises if the linked list `connections` is empty. 
+
+   - If `connections` is empty, the loop won't execute, and `count` will remain 0.
+   - Subsequently, `alloc_bytes` will be called with `count` as 0, attempting to allocate zero bytes of memory.
+   - While not strictly an out-of-bounds write in this case, allocating zero bytes can lead to problems:
+      - Some systems may return a valid, but unusable, memory address for a zero-byte allocation.
+      - Dereferencing this address later (which the code likely intends to do) would lead to undefined and potentially dangerous behavior.
+
+**Step 2: Fixing Strategy:**
+
+The patch addresses this issue by adding a simple check:
+
+```c
+    if (count == 0)
+    {
+        return;
+    }
+    array = alloc_bytes(sizeof(connection *) * count, "connection array");
+```
+
+**Reasoning:**
+
+- **Check for Empty List:** The `if (count == 0)` condition specifically checks if the loop counted any connections. 
+- **Safe Handling:** If `count` is 0 (meaning the list was empty), the function immediately returns. This prevents the attempt to allocate zero bytes and avoids potential issues.
+- **Normal Execution:**  If `count` is greater than 0, it implies the linked list has elements. In this case, the code proceeds to allocate memory for the `array` and presumably continues its intended operation.
+
+**Conclusion:**
+
+The patch provides a simple yet effective fix by ensuring that memory allocation is only attempted when there are actually connections to store in the array. This prevents undefined behavior and potential vulnerabilities associated with zero-byte allocations. 

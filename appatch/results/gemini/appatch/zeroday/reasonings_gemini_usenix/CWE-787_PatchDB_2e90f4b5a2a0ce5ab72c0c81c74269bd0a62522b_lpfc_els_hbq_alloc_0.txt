@@ -1,0 +1,19 @@
+## Reasoning Steps for Patching CWE-787 in `lpfc_els_hbq_alloc`
+
+Here's a breakdown of the reasoning behind the patch:
+
+**Step 1: Root Cause Analysis**
+
+- **Memory Allocation without Initialization:** The code uses `kmalloc` to allocate memory for the `hbq_dmabuf` structure. However, `kmalloc` only allocates memory and doesn't initialize the contents. This means the allocated memory might contain leftover data (garbage values).
+- **Potential Use of Uninitialized Data:** The code doesn't explicitly initialize the members of the `hbq_dmabuf` structure after allocation. If the code later accesses and uses these uninitialized members, it leads to undefined behavior. This could manifest as unexpected program flow, crashes, or potential security vulnerabilities depending on how the uninitialized data is used.
+
+**Step 2: Fixing Strategy**
+
+- **Ensure Memory Initialization:** The core issue is the lack of initialization of the allocated memory. To fix this, we should use a memory allocation function that both allocates and initializes the memory to a known safe state.
+- **Choosing `kzalloc`:**  The `kzalloc` function is ideal for this situation. It's similar to `kmalloc` but additionally initializes the allocated memory to zero. This ensures that all members of the `hbq_dmabuf` structure are set to predictable zero values, preventing the use of uninitialized data.
+
+**Conclusion:**
+
+The vulnerability in the original code stems from using uninitialized memory allocated with `kmalloc`. By switching to `kzalloc`, we guarantee the allocated memory is zeroed, eliminating the risk of CWE-787 (Out-of-bounds write) due to potential misuse of uninitialized data within the `hbq_dmabuf` structure. 
+
+**Important Note:** While the patch directly addresses the use of uninitialized memory, it's crucial to review the usage of `hbq_dmabuf` in the broader codebase. Ensure that all members of the structure are appropriately initialized before use, even after using `kzalloc`. This comprehensive approach ensures robust and secure code. 

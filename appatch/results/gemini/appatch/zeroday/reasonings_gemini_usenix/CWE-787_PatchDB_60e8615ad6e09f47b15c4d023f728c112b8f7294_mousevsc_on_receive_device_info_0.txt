@@ -1,0 +1,45 @@
+## Reasoning for the Patch:
+
+The vulnerability lies in the possibility of `input_device->report_desc_size` being zero, which leads to a zero-length allocation with `kzalloc`. This allocation might succeed but is functionally useless and can lead to issues later when accessing the allocated memory.
+
+Here's a breakdown of the reasoning:
+
+**Step 1. Root Cause Analysis:**
+
+1. **Unvalidated Size:** The code directly uses `input_device->report_desc_size` obtained from `desc->desc[0].wDescriptorLength` as the size argument for `kzalloc` without checking if it's zero.
+
+2. **Zero-length Allocation:**  If `desc->desc[0].wDescriptorLength` is zero, `kzalloc` will attempt to allocate zero bytes. While technically not an error, it's often undesirable as it leads to wasted resources and potential confusion.
+
+3. **Potential Consequences:** Accessing the allocated memory later, assuming a valid size, can lead to undefined behavior (e.g., crashes) if `report_desc_size` was zero initially.
+
+**Step 2. Fixing Strategy:**
+
+1. **Validation:** The primary fix involves adding a check to ensure `input_device->report_desc_size` is not zero before attempting the allocation. 
+
+2. **Handling Zero Size:**  If `report_desc_size` is indeed zero,  a specific action needs to be taken. The provided patch suggests a `cleanup` routine. This could involve:
+    - **Error Handling:** Logging an error message and potentially returning an error code to signal the issue.
+    - **Resource Cleanup:**  Freeing any previously allocated resources to prevent leaks.
+    - **Alternative Logic:** Implementing alternative logic that handles the case of a zero-size report descriptor gracefully.
+
+**Explanation of the Patch:**
+
+```diff
+--- a/drivers/hid/usbhid/usbkbd.c
++++ b/drivers/hid/usbhid/usbkbd.c
+@@ -15,6 +15,10 @@
+ 16     memcpy(input_device->hid_desc, desc, desc->bLength);
+ 17     input_device->report_desc_size = desc->desc[0].wDescriptorLength;
+ 18     input_device->report_desc = kzalloc(input_device->report_desc_size, GFP_ATOMIC);
++19     if (input_device->report_desc_size == 0)
++20     {
++21         cleanup
++22     }
+ 
+ static int mousevsc_probe(struct usb_interface *intf, const struct usb_device_id *id)
+ 24 {
+
+```
+
+- Lines 19-22: The added code checks if `input_device->report_desc_size` is zero. If so, it executes a `cleanup` routine before proceeding with the allocation.
+
+This patch effectively prevents the potential for a zero-length allocation, ensuring that `kzalloc` is only called with a meaningful size and avoiding potential issues stemming from a zero-sized `report_desc`. 

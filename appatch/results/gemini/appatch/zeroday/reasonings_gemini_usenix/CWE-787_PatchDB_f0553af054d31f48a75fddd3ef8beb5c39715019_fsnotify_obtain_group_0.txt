@@ -1,0 +1,19 @@
+## Reasoning for the Patch: CWE-787 in fsnotify_obtain_group
+
+This code snippet presents a less obvious case of CWE-787 (Out-of-bounds write), often referred to as an uninitialized variable vulnerability. Let's break down the reasoning behind the patch.
+
+**Step 1. Root Cause Analysis:**
+
+1. **Memory Allocation without Initialization:** The code uses `kmalloc` to allocate memory for a `fsnotify_group` structure. However, `kmalloc` only allocates memory; it doesn't initialize the contents of the allocated memory. This leaves the allocated memory with potentially arbitrary values.
+
+2. **Potential for Out-of-Bounds Write:** The code doesn't explicitly show what happens to the `group` structure after allocation.  However, there's a strong possibility that members of this structure are written to later in the code. If these members are used for indexing or determining memory access offsets *before* being properly initialized, it could lead to writing data outside the bounds of intended memory locations.
+
+3. **Example Scenario:** Imagine the `fsnotify_group` structure contains a field `num_entries` representing the number of entries in an internal array. If this field is uninitialized, it could contain a large garbage value. Later, the code might use `num_entries` to iterate and write to this internal array, potentially exceeding the allocated bounds and causing an out-of-bounds write.
+
+**Step 2. Fixing Strategy:**
+
+- **Use `kzalloc`:** The patch replaces `kmalloc` with `kzalloc`. The key difference is that `kzalloc` not only allocates memory but also initializes the entire allocated memory block to zero. This eliminates the risk of uninitialized members within the `fsnotify_group` structure.
+
+**Conclusion:**
+
+While not immediately evident as a classic buffer overflow, this code demonstrates how uninitialized memory can lead to CWE-787. Using `kzalloc` ensures that the allocated memory for `fsnotify_group` is zeroed out, preventing potential out-of-bounds writes caused by using uninitialized values within the structure. This proactive approach enhances the security and stability of the code. 

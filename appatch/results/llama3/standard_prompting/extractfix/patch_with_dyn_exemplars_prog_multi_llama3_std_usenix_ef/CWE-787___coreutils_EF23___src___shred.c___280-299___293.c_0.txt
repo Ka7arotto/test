@@ -1,0 +1,82 @@
+Step 1:  CWE-787 vulnerability is an "Out-of-bounds Write" vulnerability. 
+
+The root cause of this vulnerability is that the `memcpy` function at line 12 does not perform any bounds checking on the destination buffer `r + i`. 
+
+In this specific case, the loop starts at `i = 3` and doubles `i` in each iteration until `i` is no longer less than `size / 2`. However, the `memcpy` function is called with `i` as the size of the data to be copied, and the destination address is `r + i`. 
+
+If `i` exceeds `size - i` (i.e., the remaining space in the buffer), the `memcpy` function will write beyond the end of the buffer, resulting in an out-of-bounds write. This can cause undefined behavior, including crashes, data corruption, or even code execution.
+
+To fix this vulnerability, you should ensure that the destination buffer has enough space to hold the data being copied. You can do this by changing the loop condition to `i < size - i` to ensure that `i` never exceeds the remaining space in the buffer.
+
+Here's the corrected code:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+    size_t i;
+    for (i = 3; i < size - i; i *= 2)
+        memcpy (r + i, r, i);
+}
+```
+
+Alternatively, you can also use `memmove` instead of `memcpy` to handle overlapping source and destination buffers. However, in this specific case, using `memmove` would not fix the out-of-bounds write vulnerability.
+Here are the five possible patches for the vulnerability:
+
+**Patch A**
+```
+<   for (i = 3; i < size / 2; i *= 2)
+---
+>   for (i = 3; i < size - i; i *= 2)
+```
+This patch ensures that the destination buffer has enough space to hold the data being copied, preventing the out-of-bounds write vulnerability.
+
+**Patch B**
+```
+<   memcpy (r + i, r, i);
+---
+>   if (i <= size - i) {
+>       memcpy (r + i, r, i);
+>   } else {
+>       break;
+>   }
+```
+This patch adds a conditional check to ensure that the destination buffer has enough space before calling `memcpy`. If the buffer is too small, it breaks out of the loop to prevent the out-of-bounds write.
+
+**Patch C**
+```
+<   memcpy (r + i, r, i);
+---
+>   size_t remaining_space = size - i;
+>   if (remaining_space >= i) {
+>       memcpy (r + i, r, i);
+>   } else {
+>       memcpy (r + i, r, remaining_space);
+>   }
+```
+This patch calculates the remaining space in the buffer and uses it to limit the amount of data copied by `memcpy`, preventing the out-of-bounds write.
+
+**Patch D**
+```
+<   for (i = 3; i < size / 2; i *= 2)
+---
+>   for (i = 3; i < size; i *= 2) {
+>       if (i > size - i) {
+>           break;
+>       }
+>       memcpy (r + i, r, i);
+>   }
+```
+This patch adds a conditional check inside the loop to ensure that the destination buffer has enough space before calling `memcpy`. If the buffer is too small, it breaks out of the loop to prevent the out-of-bounds write.
+
+**Patch E**
+```
+<   memcpy (r + i, r, i);
+---
+>   if (i + i <= size) {
+>       memcpy (r + i, r, i);
+>   } else {
+>       memcpy (r + i, r, size - i);
+>   }
+```
+This patch adds a conditional check to ensure that the destination buffer has enough space before calling `memcpy`. If the buffer is too small, it limits the amount of data copied to prevent the out-of-bounds write.

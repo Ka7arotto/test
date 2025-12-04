@@ -1,0 +1,38 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `pdata->num_ep`:
+  - `pdata->num_ep` is obtained from the `pdata` structure, which is part of the platform device data.
+  - We need to consider what values `pdata->num_ep` might take.
+  - If `pdata->num_ep` is very large, this could lead to an integer overflow when calculating the size of the memory allocation.
+
+- 2: Memory Allocation:
+  - The size of the memory allocation is calculated as `sizeof(usba_ep) * pdata->num_ep`.
+  - If `pdata->num_ep` is large enough, this calculation could overflow, resulting in a small allocation size.
+  - However, the code does not check for this potential overflow.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `pdata->num_ep` is large enough to cause an integer overflow when calculating the allocation size.
+  - This could result in a buffer overflow when writing to the allocated memory, potentially leading to memory corruption and security vulnerabilities.
+
+- 4: Additional Issue:
+  - Even if the allocation size is calculated correctly, the allocated memory is not initialized.
+  - This means that the memory will contain random values, which could lead to unexpected behavior when using the allocated memory.
+
+### Conclusion:
+The vulnerable behavior in this code is a potential buffer overflow due to an integer overflow when calculating the allocation size. Additionally, the allocated memory is not initialized, which could lead to unexpected behavior. To fix this, we need to ensure that the allocation size is calculated correctly and that the allocated memory is initialized.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to use a function that initializes the allocated memory to zero. This can be done by replacing `kmalloc` with `kzalloc`, which is a kernel function that allocates memory and initializes it to zero. This will prevent the allocated memory from containing random values, which could lead to unexpected behavior.
+
+Additionally, to prevent the integer overflow, we could add a check to ensure that `pdata->num_ep` is not too large. However, in this case, the patch only addresses the issue of initializing the allocated memory.
+
+Therefore, the patch should be:
+```
+<     usba_ep = kmalloc(sizeof(usba_ep) * pdata->num_ep, GFP_KERNEL);
+---
+>     usba_ep = kzalloc(sizeof(usba_ep) * pdata->num_ep, GFP_KERNEL);
+```
+Note that this patch does not address the potential integer overflow issue. To fully fix the vulnerability, additional checks should be added to ensure that `pdata->num_ep` is not too large.

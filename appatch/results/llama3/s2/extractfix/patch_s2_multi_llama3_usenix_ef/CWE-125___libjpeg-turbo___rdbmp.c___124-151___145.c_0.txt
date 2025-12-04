@@ -1,0 +1,88 @@
+Here are five possible code completions for the given function:
+
+**Option 1: Basic Row Retrieval**
+
+```c
+if (image_ptr == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+}
+inptr = image_ptr[0];
+outptr = source->output_buf;
+for (col = cinfo->image_width; col > 0; col--) {
+    *outptr++ = GETJSAMPLE(*inptr++);
+}
+return source->output_buf;
+```
+
+**Option 2: Row Retrieval with Error Handling**
+
+```c
+if (image_ptr == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+}
+inptr = image_ptr[0];
+outptr = source->output_buf;
+for (col = cinfo->image_width; col > 0; col--) {
+    if (col >= cinfo->image_width) {
+        ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+    }
+    *outptr++ = GETJSAMPLE(*inptr++);
+}
+return source->output_buf;
+```
+
+**Option 3: Row Retrieval with Colormap Indexing**
+
+```c
+if (image_ptr == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+}
+inptr = image_ptr[0];
+outptr = source->output_buf;
+for (col = cinfo->image_width; col > 0; col--) {
+    t = *inptr++;
+    if (t < 0 || t >= cmaplen) {
+        ERREXIT(cinfo, JERR_OUT_OF_RANGE);
+    }
+    *outptr++ = colormap[t];
+}
+return source->output_buf;
+```
+
+**Option 4: Row Retrieval with Bounds Checking**
+
+```c
+if (image_ptr == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+}
+inptr = image_ptr[0];
+outptr = source->output_buf;
+for (col = cinfo->image_width; col > 0; col--) {
+    if (inptr >= image_ptr[0] + cinfo->image_width) {
+        ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+    }
+    *outptr++ = GETJSAMPLE(*inptr++);
+}
+return source->output_buf;
+```
+
+**Option 5: Row Retrieval with Colormap Indexing and Bounds Checking**
+
+```c
+if (image_ptr == NULL) {
+    ERREXIT(cinfo, JERR_OUT_OF_MEMORY);
+}
+inptr = image_ptr[0];
+outptr = source->output_buf;
+for (col = cinfo->image_width; col > 0; col--) {
+    if (inptr >= image_ptr[0] + cinfo->image_width) {
+        ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+    }
+    t = *inptr++;
+    if (t < 0 || t >= cmaplen) {
+        ERREXIT(cinfo, JERR_OUT_OF_RANGE);
+    }
+    *outptr++ = colormap[t];
+}
+return source->output_buf;
+```

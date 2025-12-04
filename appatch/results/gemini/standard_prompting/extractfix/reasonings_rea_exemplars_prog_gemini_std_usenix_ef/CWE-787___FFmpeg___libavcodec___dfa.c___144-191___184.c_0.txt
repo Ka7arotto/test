@@ -1,0 +1,35 @@
+## Root Cause Analysis of CWE-787 Vulnerability
+
+The CWE-787 vulnerability at line 35 arises from **an out-of-bounds read** due to **incorrect bounds checking**.  Let's break down the issue:
+
+**1. The Vulnerable Code:**
+
+```c
+35             if (frame_end - frame < width + 3)
+```
+
+This conditional statement checks if the remaining bytes to be processed in the frame (`frame_end - frame`) are less than `width + 3`. This check is intended to ensure that there are enough bytes available before performing a copy operation.
+
+**2. The Problem:**
+
+The problem lies in the calculation of the required bytes.  The code should ensure that there are at least `width + 3` bytes **before** the current `frame` pointer to accommodate the copy operation at lines 37-39 and 40-42.  However, the current check only considers the bytes **after** the `frame` pointer.
+
+**3. The Vulnerability:**
+
+If the remaining bytes (`frame_end - frame`) are less than `width + 3`, but there aren't enough bytes **before** `frame`, attempting the copy operation at lines 37-42 will result in accessing memory outside of the allocated frame buffer. This leads to an **out-of-bounds read**, potentially causing a program crash, data corruption, or other security vulnerabilities.
+
+**4. Example Scenario:**
+
+Imagine a scenario where `frame_end - frame` is 2, and `width` is 10. The conditional statement at line 35 would evaluate to true since 2 < 13. However, if the `frame` pointer is positioned only 2 bytes away from the beginning of the frame, attempting to copy 3 bytes from the location pointed to by `frame` would result in reading memory outside the frame buffer.
+
+**5. Solution:**
+
+To fix this vulnerability, the bounds check should consider the bytes before the current `frame` pointer as well. The conditional statement should be modified to:
+
+```c
+if (frame - frame_start < width + 3 || frame_end - frame < width + 3)
+```
+
+This ensures that enough bytes are available both before and after the `frame` pointer, preventing the out-of-bounds read.
+
+**In conclusion, the root cause of the vulnerability is the incorrect bounds check at line 35, which only verifies the availability of bytes after the current frame pointer, leading to a potential out-of-bounds read during the copy operation.** 

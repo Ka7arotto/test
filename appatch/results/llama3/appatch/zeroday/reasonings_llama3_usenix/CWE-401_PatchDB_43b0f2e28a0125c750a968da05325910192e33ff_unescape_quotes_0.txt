@@ -1,0 +1,29 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate Memory Allocation:
+  - Memory is allocated for `destination` using `calloc`.
+  - If the allocation fails, the function handles the error by printing an error message and exiting the program.
+
+- 2: Memory Usage:
+  - The allocated memory is used to store the unescaped string.
+  - The `destination` pointer is used to keep track of the current position in the allocated memory.
+
+- 3: Potential Vulnerability:
+  - After the loop, the allocated memory is not freed.
+  - This is a classic example of a memory leak vulnerability. The memory allocated for `destination` is not released back to the system, which can lead to memory exhaustion and performance issues.
+
+### Conclusion:
+The vulnerable behavior in this code is a memory leak. It occurs because the allocated memory for `destination` is not freed after use. This can lead to memory exhaustion and performance issues. Proper memory management should be added to ensure that the allocated memory is released back to the system.
+
+### Step 2. Fixing Strategy:
+A common fixing strategy is to free the allocated memory after use. This can be done by adding a call to `free` after the allocated memory is no longer needed. Therefore, the patch should be:
+```
+<     strcpy(source, destination);
+< }---
+>     strcpy(source, destination);
+>     free(destination);
+> }
+```
+By adding the `free(destination)` call, we ensure that the allocated memory is released back to the system, preventing a memory leak.

@@ -1,0 +1,31 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `scheme`:
+  - `scheme` is obtained from `g_uri_parse_scheme(retval)`. We need to consider what values `scheme` might take.
+  - If `scheme` is not `NULL`, it means a valid scheme was parsed from `retval`.
+
+- 2: Memory Management:
+  - The `g_uri_parse_scheme` function returns a dynamically allocated string, which needs to be freed when it's no longer needed.
+  - However, in the given code, `scheme` is not freed when it's not `NULL`.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `scheme` is not freed when it's not `NULL`. This results in a memory leak.
+  - A memory leak occurs when memory is allocated but not released, causing the program to consume increasing amounts of memory over time.
+
+### Conclusion:
+The vulnerable behavior in this code is a memory leak. It occurs because the `scheme` variable is not freed when it's not `NULL`. This can cause the program to consume increasing amounts of memory over time, potentially leading to performance issues or crashes. Proper memory management should be added to ensure that `scheme` is freed when it's no longer needed.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to ensure that dynamically allocated memory is freed when it's no longer needed. In this case, we need to add a call to `g_free` to free the `scheme` variable when it's not `NULL`. Therefore, the patch should be:
+```
+<         }
+<     }
+---
+>         }
+>         g_free(scheme);
+>     }
+```
+This patch ensures that the `scheme` variable is freed when it's not `NULL`, preventing a memory leak.

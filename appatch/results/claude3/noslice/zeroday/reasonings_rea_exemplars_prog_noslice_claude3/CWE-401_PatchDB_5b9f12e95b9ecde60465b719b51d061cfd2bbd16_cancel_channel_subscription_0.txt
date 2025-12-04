@@ -1,0 +1,7 @@
+The root cause of the CWE-401 (Missing Release of Memory after Effective Lifetime) vulnerability in the given code is that the memory allocated for the `struct subscription` object pointed to by `subscr` is not being freed when the subscription is cancelled.
+
+In the code, the `objectlist` structure is used to maintain a linked list of `struct subscription` objects. When a subscription needs to be cancelled, the code iterates through the linked list and removes the corresponding `objectlist` node by updating the pointers (lines 15-25).
+
+However, the memory allocated for the `struct subscription` object itself, which is stored in the `object_ptr` field of the `objectlist` node, is not being freed. This leads to a memory leak, as the memory allocated for the cancelled subscription is not released after its effective lifetime.
+
+To fix this vulnerability, the code should free the memory allocated for the `struct subscription` object before removing the `objectlist` node from the linked list. This can be done by adding a `free(subscr)` statement before or after the `free(list)` statement on line 16.

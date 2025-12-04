@@ -1,0 +1,85 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 quantize_ord_dither (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
+2                      JSAMPARRAY output_buf, int num_rows)
+3 /* General case, with ordered dithering */
+4 {
+5   my_cquantize_ptr cquantize = (my_cquantize_ptr) cinfo->cquantize;
+6   register JSAMPROW input_ptr;
+7   register JSAMPROW output_ptr;
+8   JSAMPROW colorindex_ci;
+9   int *dither;                  /* points to active row of dither matrix */
+10   int row_index, col_index;     /* current indexes into dither matrix */
+11   int nc = cinfo->out_color_components;
+12   int ci;
+13   int row;
+14   JDIMENSION col;
+15   JDIMENSION width = cinfo->output_width;
+16 
+17   for (row = 0; row < num_rows; row++) {
+18     /* Initialize output values to 0 so can process components separately */
+19     jzero_far((void *) output_buf[row], (size_t) (width * sizeof(JSAMPLE)));
+20     row_index = cquantize->row_index;
+21     for (ci = 0; ci < nc; ci++) {
+22       input_ptr = input_buf[row] + ci;
+23       output_ptr = output_buf[row];
+24       colorindex_ci = cquantize->colorindex[ci];
+25       dither = cquantize->odither[ci][row_index];
+26       col_index = 0;
+27 
+28       for (col = width; col > 0; col--) {
+29         /* Form pixel value + dither, range-limit to 0..MAXJSAMPLE,
+30          * select output value, accumulate into output code for this pixel.
+31          * Range-limiting need not be done explicitly, as we have extended
+32          * the colorindex table to produce the right answers for out-of-range
+33          * inputs.  The maximum dither is +- MAXJSAMPLE; this sets the
+34          * required amount of padding.
+35          */
+36         *output_ptr += colorindex_ci[GETJSAMPLE(*input_ptr)+dither[col_index]];
+37         input_ptr += nc;
+38         output_ptr++;
+39         col_index = (col_index + 1) & ODITHER_MASK;
+40       }
+41     }
+42     /* Advance row index for next row */
+43     row_index = (row_index + 1) & ODITHER_MASK;
+44     cquantize->row_index = row_index;
+45   }
+46 }
+```
+which has a CWE-476 vulnerability at line:
+```
+19     jzero_far((void *) output_buf[row], (size_t) (width * sizeof(JSAMPLE)));
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

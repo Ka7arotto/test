@@ -1,0 +1,34 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `kmalloc`:
+  - `kmalloc` is used to allocate memory for `wid.val`.
+  - If `kmalloc` fails, it returns `NULL`.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `kmalloc` fails and returns `NULL`, but the code does not check for this condition.
+  - In this case, `wid.val` will be `NULL`, and assigning it to `stamac` will also make `stamac` `NULL`.
+  - If the code later tries to access or use `stamac` without checking if it's `NULL`, it will result in a null pointer dereference, leading to undefined behavior.
+
+- 3: CWE-476 (NULL Pointer Dereference) Vulnerability:
+  - The vulnerability is a classic example of CWE-476, where a null pointer is dereferenced, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `kmalloc` fails and returns `NULL` before assigning it to `stamac`. If `kmalloc` fails, `stamac` will be `NULL`, and any subsequent use of `stamac` will result in undefined behavior. Proper error checking should be added to ensure that `kmalloc` does not return `NULL` before using the allocated memory.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add error checking after the `kmalloc` call to ensure that it did not return `NULL`. If `kmalloc` fails, the function should handle the error and return an error code. In this case, the patch should check if `wid.val` is `NULL` after the `kmalloc` call and return an error code if it is. The patch should be:
+```
+<     wid.val = kmalloc(wid.size, GFP_KERNEL);
+<     stamac = wid.val;
+---
+>     wid.val = kmalloc(wid.size, GFP_KERNEL);
+>     if (!wid.val)
+>     {
+>         return -ENOMEM;
+>     }
+>     stamac = wid.val;
+```
+This patch adds a check to ensure that `wid.val` is not `NULL` before assigning it to `stamac`. If `wid.val` is `NULL`, the function returns an error code `-ENOMEM`, indicating that the memory allocation failed.

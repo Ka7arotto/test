@@ -1,0 +1,33 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate `eb`:
+  - `eb` is obtained from `kmem_cache_zalloc(extent_buffer_cache, mask)`. We need to consider what values `eb` might take.
+  - If `kmem_cache_zalloc` fails to allocate memory, it will return `NULL`.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `eb` is `NULL` and the code attempts to access its members (e.g., `eb->start`).
+  - This is a classic example of a null pointer dereference vulnerability. Accessing members of a null pointer can lead to crashes or exploitable conditions.
+
+- 3: CWE-476 (NULL Pointer Dereference) Vulnerability:
+  - The code does not check if `eb` is `NULL` before accessing its members.
+  - If `eb` is `NULL`, the assignment `eb->start = start` will result in a null pointer dereference, leading to undefined behavior.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `eb` is `NULL` before accessing its members. If `eb` is `NULL`, the code will attempt to access memory at address 0, leading to a crash or potential security vulnerability. Proper null pointer checks should be added to ensure that `eb` is not `NULL` before accessing its members.
+
+### Step 2. Fixing Strategy:
+A common fixing strategy is to add a null pointer check after the memory allocation. This can be done by checking if `eb` is `NULL` after the `kmem_cache_zalloc` call. If `eb` is `NULL`, the function should return an error or handle the situation accordingly. Therefore, the patch should be:
+```
+<     eb = kmem_cache_zalloc(extent_buffer_cache, mask);
+<     eb->start = start;
+---
+>     eb = kmem_cache_zalloc(extent_buffer_cache, mask);
+>     if (eb == NULL)
+>     {
+>         return NULL;
+>     }
+>     eb->start = start;
+```
+This patch adds a null pointer check to ensure that `eb` is not `NULL` before accessing its members, preventing the null pointer dereference vulnerability.

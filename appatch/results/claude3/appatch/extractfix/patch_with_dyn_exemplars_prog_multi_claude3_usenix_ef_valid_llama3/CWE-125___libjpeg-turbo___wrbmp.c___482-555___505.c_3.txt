@@ -1,0 +1,16 @@
+
+< } else if (cinfo->out_color_space == JCS_RGB565 ||  
+---
+> } else {
+>     static const J_COLOR_SPACE supported_spaces[] = {JCS_RGB565, JCS_RGB, JCS_YCbCr};
+>     size_t i;
+>     for (i = 0; i < sizeof(supported_spaces) / sizeof(supported_spaces[0]); i++) {
+>         if (cinfo->out_color_space == supported_spaces[i]) {
+>             // Handle supported color space
+>             break;
+>         }
+>     }
+>     if (i == sizeof(supported_spaces) / sizeof(supported_spaces[0])) {
+>         ERREXIT(cinfo, JERR_BAD_J_COLORSPACE);
+>     }
+> }

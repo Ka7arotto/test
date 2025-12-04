@@ -1,0 +1,49 @@
+## Reasoning Steps for Patching CWE-787 in do_ipv6_getsockopt
+
+Here's a breakdown of the reasoning behind the provided patch:
+
+**Step 1: Vulnerability Analysis (CWE-787: Out-of-bounds Write)**
+
+The vulnerability lies in the unchecked use of `len` within `put_user(len, optlen)` on line 148. Let's analyze why:
+
+* **Uncontrolled Value:** The value of `len` is modified throughout the function via various operations (e.g., lines 98, 146). Crucially, there's no guarantee that `len` remains non-negative after these modifications.
+* **put_user Semantics:** The `put_user()` function writes a value to user-space memory.  If `len` is negative, it's interpreted as a large unsigned value, potentially causing a write beyond the bounds of the memory pointed to by `optlen`.
+
+**Step 2:  Root Cause Identification**
+
+The root cause is the lack of bounds checking on `len` before passing it to `put_user()`. If `len` becomes negative due to errors or unexpected conditions within the function, an out-of-bounds write can occur.
+
+**Step 3: Patching Strategy**
+
+The patch addresses the vulnerability by introducing a check on the value of `len` before calling `put_user()`:
+
+```diff
+--- a/net/ipv6/ipv6_sock.c
++++ b/net/ipv6/ipv6_sock.c
+@@ -145,5 +145,9 @@
+ 		len = ipv6_getsockopt_sticky(sk, np->opt, optname, optval, len);
+ 
+ 	release_sock(sk);
+-	return put_user(len, optlen);
++	if (len < 0) {
++		return len;
++	}
++	return put_user(len, optlen);
+ }
+ EXPORT_SYMBOL(do_ipv6_getsockopt);
+```
+
+**Step 4: Patch Explanation**
+
+1. **Check for Negative Length:** The patch adds an `if` statement immediately before `put_user()`:
+   ```c
+   if (len < 0) {
+       return len;
+   }
+   ```
+2. **Handle Negative Length:** If `len` is negative, it indicates an error or an unexpected condition.  The function now immediately returns the negative `len` value. This signals an error to the caller without attempting the potentially dangerous `put_user()` operation.
+3. **Safe put_user Execution:** Only if `len` is non-negative (meaning a valid length) does the code proceed to call `put_user(len, optlen)`. This ensures that only valid lengths are used for writing to user space, preventing the out-of-bounds write.
+
+**Conclusion:**
+
+By adding a simple bounds check on `len`, the patch prevents a potentially exploitable out-of-bounds write vulnerability.  This demonstrates the importance of carefully considering the values passed to functions that interact with memory, especially when dealing with user-supplied data or values that might be modified throughout the execution flow. 

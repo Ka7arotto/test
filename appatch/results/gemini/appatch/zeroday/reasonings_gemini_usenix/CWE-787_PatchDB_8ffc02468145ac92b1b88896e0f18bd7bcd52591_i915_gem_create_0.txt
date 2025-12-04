@@ -1,0 +1,22 @@
+## Reasoning for the patch:
+
+### Step 1: Root Cause Analysis: 
+
+1. **Potential Zero Size Allocation:** The `roundup(size, PAGE_SIZE)` function rounds `size` up to the nearest multiple of `PAGE_SIZE`.  If `size` is initially 0, it will remain 0 after rounding. 
+2. **Unhandled Zero Size in Allocation:**  Passing `size = 0` to `i915_gem_alloc_object` might lead to unexpected behavior. Depending on the implementation of `i915_gem_alloc_object`, a zero-size allocation request could:
+    - **Succeed but return a NULL pointer:**  This would lead to a potential NULL pointer dereference later in the code when `obj` is used.
+    - **Trigger an error or assertion within the allocation function:** This could cause a crash or undefined behavior. 
+
+### Step 2. Fixing Strategy:
+
+The core issue is the potential for an unhandled zero-size allocation request. The patch addresses this through the following steps:
+
+1. **Check for Zero Size:** After rounding `size`, the code explicitly checks if `size == 0`.
+2. **Handle Zero Size with Error:** If `size` is indeed 0, the function immediately returns an error code (`-EINVAL`), indicating an invalid argument. This prevents the zero-size allocation request from reaching `i915_gem_alloc_object`.
+
+**By adding this check, the patch ensures that the allocation function always receives a valid, non-zero size, preventing potential issues related to zero-size allocations.** 
+
+**Additional Considerations:**
+
+- **Documentation:** It's good practice to document the reason for the zero-size check and the chosen error handling mechanism.
+- **Error Propagation:**  Consider how the `-EINVAL` error code is handled by the caller of `i915_gem_create` to ensure proper error propagation and recovery.

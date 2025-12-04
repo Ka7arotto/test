@@ -1,0 +1,38 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `sizeof(rcomp.type)`:
+  - `sizeof(rcomp.type)` returns the size of the `type` field in the `rcomp` struct.
+  - However, `strlcpy` expects the destination buffer size as the third argument, which should be the maximum number of bytes that can be written to the buffer, including the null terminator.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `sizeof(rcomp.type)` is equal to the actual size of the `type` field, without accounting for the null terminator.
+  - `strlcpy` will copy the entire string "compression" into the buffer, but it will not null-terminate the buffer if the buffer size is equal to the length of the string.
+  - This can lead to a CWE-125 vulnerability, where the buffer is not null-terminated, potentially causing issues when the string is used later.
+
+- 3: Misuse of `strlcpy`:
+  - `strlcpy` is designed to safely copy strings, ensuring that the destination buffer is null-terminated.
+  - However, if the buffer size is not correctly specified, `strlcpy` may not null-terminate the buffer, leading to potential issues.
+
+### Conclusion:
+The vulnerable behavior in this code is a misuse of `strlcpy`, where the buffer size is not correctly specified. This can lead to a CWE-125 vulnerability, where the buffer is not null-terminated. To fix this issue, we need to ensure that the buffer is null-terminated.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to use `strncpy` instead of `strlcpy`, which will null-terminate the buffer if the buffer size is larger than the length of the string. However, we should also ensure that the buffer size is correctly specified to include space for the null terminator.
+
+The patch should be:
+```
+<     strlcpy(rcomp.type, "compression", sizeof(rcomp.type));
+---
+>     strncpy(rcomp.type, "compression", sizeof(rcomp.type));
+```
+However, this patch is not entirely correct. A better patch would be:
+```
+<     strlcpy(rcomp.type, "compression", sizeof(rcomp.type));
+---
+>     strncpy(rcomp.type, "compression", sizeof(rcomp.type) - 1);
+>     rcomp.type[sizeof(rcomp.type) - 1] = '\0';
+```
+This patch ensures that the buffer is null-terminated, even if the string "compression" is equal in length to the buffer size.

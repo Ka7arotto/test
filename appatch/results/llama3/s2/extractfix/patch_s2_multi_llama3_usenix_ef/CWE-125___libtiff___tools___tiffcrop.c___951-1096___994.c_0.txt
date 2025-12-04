@@ -1,0 +1,360 @@
+Here are five possible code completions for the given function:
+
+**Completion 1: Reading Separate Tiles into Buffer with Error Handling**
+
+```c
+static int readSeparateTilesIntoBuffer(TIFF* in, uint8* obuf, 
+                                       uint32 imagelength, uint32 imagewidth, 
+                                       uint32 tw, uint32 tl,
+                                       uint16 spp, uint16 bps)
+{
+    int i, status = 1, sample;
+    int shift_width, bytes_per_pixel;
+    uint16 bytes_per_sample;
+    uint32 row, col;     /* Current row and col of image */
+    uint32 nrow, ncol;   /* Number of rows and cols in current tile */
+    uint32 row_offset, col_offset; /* Output buffer offsets */
+    tsize_t tbytes = 0, tilesize = TIFFTileSize(in);
+    tsample_t s;
+    uint8* bufp = (uint8*)obuf;
+    unsigned char* srcbuffs[MAX_SAMPLES];
+    unsigned char* tbuff = NULL;
+
+    bytes_per_sample = TIFFScanlineSize(in) / TIFFNumberOfSamples(in);
+    bytes_per_pixel = bytes_per_sample * spp;
+
+    for (row = 0; row < imagelength; row += tl) {
+        nrow = (row + tl <= imagelength) ? tl : imagelength - row;
+        for (col = 0; col < imagewidth; col += tw) {
+            ncol = (col + tw <= imagewidth) ? tw : imagewidth - col;
+            row_offset = row * imagewidth * bytes_per_pixel;
+            col_offset = col * bytes_per_pixel;
+
+            for (sample = 0; sample < spp; sample++) {
+                s = TIFFReadScanline(in, srcbuffs[sample], row, col, sample);
+                if (s != 1) {
+                    status = 0;
+                    break;
+                }
+            }
+
+            if (status == 0) {
+                break;
+            }
+
+            for (i = 0; i < nrow; i++) {
+                tbuff = srcbuffs[0] + i * tw * bytes_per_pixel;
+                memcpy(bufp + row_offset + i * imagewidth * bytes_per_pixel + col_offset, tbuff, ncol * bytes_per_pixel);
+            }
+        }
+    }
+
+    return status;
+}
+```
+
+**Completion 2: Reading Separate Tiles into Buffer with Memory Allocation**
+
+```c
+static int readSeparateTilesIntoBuffer(TIFF* in, uint8* obuf, 
+                                       uint32 imagelength, uint32 imagewidth, 
+                                       uint32 tw, uint32 tl,
+                                       uint16 spp, uint16 bps)
+{
+    int i, status = 1, sample;
+    int shift_width, bytes_per_pixel;
+    uint16 bytes_per_sample;
+    uint32 row, col;     /* Current row and col of image */
+    uint32 nrow, ncol;   /* Number of rows and cols in current tile */
+    uint32 row_offset, col_offset; /* Output buffer offsets */
+    tsize_t tbytes = 0, tilesize = TIFFTileSize(in);
+    tsample_t s;
+    uint8* bufp = (uint8*)obuf;
+    unsigned char* srcbuffs[MAX_SAMPLES];
+    unsigned char* tbuff = NULL;
+
+    bytes_per_sample = TIFFScanlineSize(in) / TIFFNumberOfSamples(in);
+    bytes_per_pixel = bytes_per_sample * spp;
+
+    for (sample = 0; sample < spp; sample++) {
+        srcbuffs[sample] = (unsigned char*)malloc(tilesize);
+        if (srcbuffs[sample] == NULL) {
+            status = 0;
+            break;
+        }
+    }
+
+    if (status == 0) {
+        for (sample = 0; sample < spp; sample++) {
+            free(srcbuffs[sample]);
+        }
+        return status;
+    }
+
+    for (row = 0; row < imagelength; row += tl) {
+        nrow = (row + tl <= imagelength) ? tl : imagelength - row;
+        for (col = 0; col < imagewidth; col += tw) {
+            ncol = (col + tw <= imagewidth) ? tw : imagewidth - col;
+            row_offset = row * imagewidth * bytes_per_pixel;
+            col_offset = col * bytes_per_pixel;
+
+            for (sample = 0; sample < spp; sample++) {
+                s = TIFFReadScanline(in, srcbuffs[sample], row, col, sample);
+                if (s != 1) {
+                    status = 0;
+                    break;
+                }
+            }
+
+            if (status == 0) {
+                break;
+            }
+
+            for (i = 0; i < nrow; i++) {
+                tbuff = srcbuffs[0] + i * tw * bytes_per_pixel;
+                memcpy(bufp + row_offset + i * imagewidth * bytes_per_pixel + col_offset, tbuff, ncol * bytes_per_pixel);
+            }
+        }
+    }
+
+    for (sample = 0; sample < spp; sample++) {
+        free(srcbuffs[sample]);
+    }
+
+    return status;
+}
+```
+
+**Completion 3: Reading Separate Tiles into Buffer with Error Handling and Memory Allocation**
+
+```c
+static int readSeparateTilesIntoBuffer(TIFF* in, uint8* obuf, 
+                                       uint32 imagelength, uint32 imagewidth, 
+                                       uint32 tw, uint32 tl,
+                                       uint16 spp, uint16 bps)
+{
+    int i, status = 1, sample;
+    int shift_width, bytes_per_pixel;
+    uint16 bytes_per_sample;
+    uint32 row, col;     /* Current row and col of image */
+    uint32 nrow, ncol;   /* Number of rows and cols in current tile */
+    uint32 row_offset, col_offset; /* Output buffer offsets */
+    tsize_t tbytes = 0, tilesize = TIFFTileSize(in);
+    tsample_t s;
+    uint8* bufp = (uint8*)obuf;
+    unsigned char* srcbuffs[MAX_SAMPLES];
+    unsigned char* tbuff = NULL;
+
+    bytes_per_sample = TIFFScanlineSize(in) / TIFFNumberOfSamples(in);
+    bytes_per_pixel = bytes_per_sample * spp;
+
+    for (sample = 0; sample < spp; sample++) {
+        srcbuffs[sample] = (unsigned char*)malloc(tilesize);
+        if (srcbuffs[sample] == NULL) {
+            status = 0;
+            break;
+        }
+    }
+
+    if (status == 0) {
+        for (sample = 0; sample < spp; sample++) {
+            free(srcbuffs[sample]);
+        }
+        return status;
+    }
+
+    for (row = 0; row < imagelength; row += tl) {
+        nrow = (row + tl <= imagelength) ? tl : imagelength - row;
+        for (col = 0; col < imagewidth; col += tw) {
+            ncol = (col + tw <= imagewidth) ? tw : imagewidth - col;
+            row_offset = row * imagewidth * bytes_per_pixel;
+            col_offset = col * bytes_per_pixel;
+
+            for (sample = 0; sample < spp; sample++) {
+                s = TIFFReadScanline(in, srcbuffs[sample], row, col, sample);
+                if (s != 1) {
+                    status = 0;
+                    break;
+                }
+            }
+
+            if (status == 0) {
+                break;
+            }
+
+            for (i = 0; i < nrow; i++) {
+                tbuff = srcbuffs[0] + i * tw * bytes_per_pixel;
+                if (memcpy(bufp + row_offset + i * imagewidth * bytes_per_pixel + col_offset, tbuff, ncol * bytes_per_pixel) == NULL) {
+                    status = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    for (sample = 0; sample < spp; sample++) {
+        free(srcbuffs[sample]);
+    }
+
+    return status;
+}
+```
+
+**Completion 4: Reading Separate Tiles into Buffer with Multi-Threading**
+
+```c
+#include <pthread.h>
+
+typedef struct {
+    TIFF* in;
+    uint8* obuf;
+    uint32 imagelength;
+    uint32 imagewidth;
+    uint32 tw;
+    uint32 tl;
+    uint16 spp;
+    uint16 bps;
+    uint32 row;
+    uint32 col;
+} thread_data_t;
+
+void* read_separate_tiles_into_buffer_thread(void* arg) {
+    thread_data_t* data = (thread_data_t*)arg;
+    TIFF* in = data->in;
+    uint8* obuf = data->obuf;
+    uint32 imagelength = data->imagelength;
+    uint32 imagewidth = data->imagewidth;
+    uint32 tw = data->tw;
+    uint32 tl = data->tl;
+    uint16 spp = data->spp;
+    uint16 bps = data->bps;
+    uint32 row = data->row;
+    uint32 col = data->col;
+
+    int i, status = 1, sample;
+    int shift_width, bytes_per_pixel;
+    uint16 bytes_per_sample;
+    uint32 nrow, ncol;   /* Number of rows and cols in current tile */
+    uint32 row_offset, col_offset; /* Output buffer offsets */
+    tsize_t tbytes = 0, tilesize = TIFFTileSize(in);
+    tsample_t s;
+    uint8* bufp = (uint8*)obuf;
+    unsigned char* srcbuffs[MAX_SAMPLES];
+    unsigned char* tbuff = NULL;
+
+    bytes_per_sample = TIFFScanlineSize(in) / TIFFNumberOfSamples(in);
+    bytes_per_pixel = bytes_per_sample * spp;
+
+    for (sample = 0; sample < spp; sample++) {
+        srcbuffs[sample] = (unsigned char*)malloc(tilesize);
+        if (srcbuffs[sample] == NULL) {
+            status = 0;
+            break;
+        }
+    }
+
+    if (status == 0) {
+        for (sample = 0; sample < spp; sample++) {
+            free(srcbuffs[sample]);
+        }
+        return NULL;
+    }
+
+    nrow = (row + tl <= imagelength) ? tl : imagelength - row;
+    ncol = (col + tw <= imagewidth) ? tw : imagewidth - col;
+    row_offset = row * imagewidth * bytes_per_pixel;
+    col_offset = col * bytes_per_pixel;
+
+    for (sample = 0; sample < spp; sample++) {
+        s = TIFFReadScanline(in, srcbuffs[sample], row, col, sample);
+        if (s != 1) {
+            status = 0;
+            break;
+        }
+    }
+
+    if (status == 0) {
+        for (sample = 0; sample < spp; sample++) {
+            free(srcbuffs[sample]);
+        }
+        return NULL;
+    }
+
+    for (i = 0; i < nrow; i++) {
+        tbuff = srcbuffs[0] + i * tw * bytes_per_pixel;
+        memcpy(bufp + row_offset + i * imagewidth * bytes_per_pixel + col_offset, tbuff, ncol * bytes_per_pixel);
+    }
+
+    for (sample = 0; sample < spp; sample++) {
+        free(srcbuffs[sample]);
+    }
+
+    return NULL;
+}
+
+static int readSeparateTilesIntoBuffer(TIFF* in, uint8* obuf, 
+                                       uint32 imagelength, uint32 imagewidth, 
+                                       uint32 tw, uint32 tl,
+                                       uint16 spp, uint16 bps)
+{
+    int i, status = 1;
+    pthread_t threads[imagelength / tl][imagewidth / tw];
+    thread_data_t thread_data[imagelength / tl][imagewidth / tw];
+
+    for (i = 0; i < imagelength / tl; i++) {
+        for (int j = 0; j < imagewidth / tw; j++) {
+            thread_data[i][j].in = in;
+            thread_data[i][j].obuf = obuf;
+            thread_data[i][j].imagelength = imagelength;
+            thread_data[i][j].imagewidth = imagewidth;
+            thread_data[i][j].tw = tw;
+            thread_data[i][j].tl = tl;
+            thread_data[i][j].spp = spp;
+            thread_data[i][j].bps = bps;
+            thread_data[i][j].row = i * tl;
+            thread_data[i][j].col = j * tw;
+
+            pthread_create(&threads[i][j], NULL, read_separate_tiles_into_buffer_thread, &thread_data[i][j]);
+        }
+    }
+
+    for (i = 0; i < imagelength / tl; i++) {
+        for (int j = 0; j < imagewidth / tw; j++) {
+            pthread_join(threads[i][j], NULL);
+        }
+    }
+
+    return status;
+}
+```
+
+**Completion 5: Reading Separate Tiles into Buffer with Multi-Threading and Error Handling**
+
+```c
+#include <pthread.h>
+
+typedef struct {
+    TIFF* in;
+    uint8* obuf;
+    uint32 imagelength;
+    uint32 imagewidth;
+    uint32 tw;
+    uint32 tl;
+    uint16 spp;
+    uint16 bps;
+    uint32 row;
+    uint32 col;
+} thread_data_t;
+
+void* read_separate_tiles_into_buffer_thread(void* arg) {
+    thread_data_t* data = (thread_data_t*)arg;
+    TIFF* in = data->in;
+    uint8* obuf = data->obuf;
+    uint32 imagelength = data->imagelength;
+    uint32 imagewidth = data->imagewidth;
+    uint32 tw = data->tw;
+    uint32 tl = data->tl;
+    uint16 spp = data->spp;
+    uint16 bps = data->bps;
+    uint32 row = data->row;
+    uint

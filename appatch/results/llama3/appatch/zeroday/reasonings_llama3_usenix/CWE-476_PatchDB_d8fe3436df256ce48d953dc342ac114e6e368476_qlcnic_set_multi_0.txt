@@ -1,0 +1,34 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `cur`:
+  - `cur` is obtained from `kzalloc(sizeof(qlcnic_mac_list_s), GFP_ATOMIC)`. We need to consider what values `cur` might take.
+  - If `kzalloc` fails to allocate memory, it will return `NULL`.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `cur` is `NULL` and the code still tries to access `cur->mac_addr`.
+  - This is a classic example of a null pointer dereference vulnerability. Accessing memory through a null pointer can lead to crashes or exploitable conditions.
+
+- 3: CWE-476 (NULL Pointer Dereference) Vulnerability:
+  - CWE-476 occurs when a program attempts to access or manipulate memory through a null (i.e., invalid) pointer.
+  - In this case, if `kzalloc` fails and returns `NULL`, the subsequent `memcpy` operation will attempt to access memory through a null pointer, leading to undefined behavior.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `kzalloc` successfully allocated memory before trying to access the allocated memory. If `kzalloc` fails and returns `NULL`, the code will attempt to access memory through a null pointer, leading to potential crashes or security vulnerabilities. Proper error checking should be added to ensure that `kzalloc` successfully allocated memory before trying to access it.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to check the return value of `kzalloc` to ensure that memory was successfully allocated before trying to access it. This can be done by adding a condition to check if `cur` is `NULL` after the `kzalloc` call. If `cur` is `NULL`, the code should handle the error and not attempt to access the allocated memory. Therefore, the patch should be:
+```
+<                 cur = kzalloc(sizeof(qlcnic_mac_list_s), GFP_ATOMIC);
+<                 memcpy(cur->mac_addr, ha->addr, ETH_ALEN);
+---
+>                 cur = kzalloc(sizeof(qlcnic_mac_list_s), GFP_ATOMIC);
+>                 if (cur == NULL)
+>                 {
+>                     break;
+>                 }
+>                 memcpy(cur->mac_addr, ha->addr, ETH_ALEN);
+```
+This patch adds a check to ensure that `cur` is not `NULL` before trying to access the allocated memory, preventing the null pointer dereference vulnerability.

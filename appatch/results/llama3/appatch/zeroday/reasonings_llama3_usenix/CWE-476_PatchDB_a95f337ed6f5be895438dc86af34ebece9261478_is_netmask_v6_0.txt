@@ -1,0 +1,35 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `ip_strv6`:
+  - `ip_strv6` is a pointer to a character array.
+  - We need to consider what values `ip_strv6` might take.
+  - If `ip_strv6` is `NULL`, this could lead to a null pointer dereference when calling `strchr(ip_strv6, '/')`.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `ip_strv6` is `NULL`, which results in a null pointer dereference when calling `strchr(ip_strv6, '/')`.
+  - This is a classic example of a null pointer dereference vulnerability. Dereferencing a null pointer can lead to crashes or exploitable conditions.
+
+- 3: CWE-476 (NULL Pointer Dereference) Vulnerability:
+  - CWE-476 occurs when a null pointer is dereferenced, which can lead to a crash or potentially exploitable condition.
+  - In this case, if `ip_strv6` is `NULL`, calling `strchr(ip_strv6, '/')` will result in a null pointer dereference.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `ip_strv6` is `NULL` before calling `strchr(ip_strv6, '/')`. If `ip_strv6` is `NULL`, the code will crash or potentially lead to an exploitable condition. Proper null pointer checking should be added to ensure `ip_strv6` is not `NULL` before calling `strchr(ip_strv6, '/')`.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add a null pointer check before calling `strchr(ip_strv6, '/')`. This can be done by adding a condition to check if `ip_strv6` is `NULL` before calling `strchr(ip_strv6, '/')`. If `ip_strv6` is `NULL`, the function should return an error or a default value. Therefore, the patch should be:
+```
+<     int cidr;
+<     if ((mask_str = strchr(ip_strv6, '/')))
+---
+>     int cidr;
+>     if (ip_strv6 == NULL)
+>     {
+>         return netmask_v6;
+>     }
+>     if ((mask_str = strchr(ip_strv6, '/')))
+```
+This patch adds a null pointer check before calling `strchr(ip_strv6, '/')`, preventing a potential null pointer dereference vulnerability.

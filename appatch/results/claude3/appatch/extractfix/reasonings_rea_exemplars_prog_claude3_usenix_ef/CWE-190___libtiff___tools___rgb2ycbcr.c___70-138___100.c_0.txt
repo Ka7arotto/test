@@ -1,0 +1,20 @@
+Let's analyze the code step by step to identify the CWE-190 (Divide By Zero) vulnerability:
+
+1. Input handling:
+   - The code uses getopt() to parse command-line arguments.
+   - When the 'h' option is encountered, optarg contains the associated value.
+
+2. Conversion:
+   - Line 28 uses atoi() to convert optarg to an integer.
+   - This value is assigned to horizSubSampling.
+
+3. Potential vulnerability:
+   - atoi() returns 0 if the input is not a valid integer or is "0".
+   - If optarg is "0" or any non-numeric string, horizSubSampling will be set to 0.
+
+4. CWE-190 (Divide By Zero):
+   - The vulnerability arises if horizSubSampling is later used as a divisor.
+   - If horizSubSampling is 0, any division operation using it will cause a divide-by-zero error.
+
+Conclusion:
+The vulnerability occurs because the code doesn't check if the converted value is 0 before assigning it to horizSubSampling. If this variable is later used as a divisor, it could lead to a divide-by-zero error, potentially causing the program to crash or exhibit undefined behavior. To fix this, the code should validate the input and ensure horizSubSampling is never set to 0.

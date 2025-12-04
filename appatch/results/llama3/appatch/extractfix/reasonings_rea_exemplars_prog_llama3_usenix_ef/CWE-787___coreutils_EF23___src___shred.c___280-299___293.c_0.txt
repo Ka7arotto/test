@@ -1,0 +1,18 @@
+- 1: Validate `size` and `i`:
+  - `size` is the input parameter that determines the size of the memory region being written to.
+  - `i` is the loop counter that starts at 3 and doubles in each iteration until it is no longer less than `size / 2`.
+  - We need to consider what happens when `i` is greater than `size - i`, which is the remaining space in the buffer.
+
+- 2: Memory Access and Indexing:
+  - The `memcpy` function is used to copy `i` bytes from the beginning of the buffer (`r`) to a location `i` bytes from the beginning of the buffer (`r + i`).
+  - If `i` is greater than `size - i`, then the destination address `r + i` will overlap with the source address `r`, and the `memcpy` function will write past the end of the buffer.
+  - This is because `memcpy` does not perform any bounds checking, and it will happily overwrite memory beyond the end of the buffer.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `i` exceeds `size - i`, which results in writing past the end of the buffer.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated buffer can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `i` is within the bounds of the allocated buffer size `size`. If `i` is greater than `size - i`, the `memcpy` function will write past the end of the buffer, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `i` does not exceed `size - i`.
+
+Note: The loop condition `i < size / 2` does not prevent the overflow because it only checks if `i` is less than half of `size`, not if `i` is less than `size - i`.

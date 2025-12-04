@@ -1,0 +1,35 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `display`:
+  - The function `client_x11_display_valid` takes a `const char *display` as input.
+  - We need to consider what values `display` might take.
+  - If `display` is `NULL`, calling `strlen(display)` will result in undefined behavior.
+
+- 2: Potential Vulnerability:
+  - The vulnerability arises if `display` is `NULL`, which results in a null pointer dereference when calling `strlen(display)`.
+  - This is a classic example of a null pointer dereference vulnerability. Dereferencing a null pointer can lead to crashes or exploitable conditions.
+
+- 3: CWE-476 (NULL Pointer Dereference) Vulnerability:
+  - CWE-476 occurs when a program attempts to access or manipulate memory through a null (i.e., invalid) pointer.
+  - In this case, the null pointer dereference occurs when `strlen(display)` is called with a null `display` pointer.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the function does not check if `display` is null before calling `strlen(display)`. If `display` is null, calling `strlen(display)` will result in undefined behavior. Proper null pointer checks should be added to ensure that `display` is not null before calling `strlen(display)`.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add a null pointer check before calling `strlen(display)`. This can be done by adding a conditional statement to check if `display` is null before proceeding with the function. If `display` is null, the function should return an error or a default value. Therefore, the patch should be:
+```
+<     size_t i, dlen;
+<     dlen = strlen(display);
+---
+>     size_t i, dlen;
+>     if (display == NULL)
+>     {
+>         return 0;
+>     }
+>     dlen = strlen(display);
+```
+This patch adds a null pointer check to prevent the null pointer dereference vulnerability. If `display` is null, the function returns 0, indicating that the display is invalid.

@@ -1,0 +1,28 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `len`:
+  - `len` is calculated as `cmnd->cmd_len - 16`. We need to consider what values `len` might take.
+  - If `cmnd->cmd_len` is less than 16, `len` will be negative. However, the code checks for this condition and sets `len` to 0 if it's negative.
+
+- 2: Alignment and Allocation:
+  - The code aligns `len` to a multiple of 4 using `ALIGN(len, 4)`. This ensures that the allocated memory is properly aligned for the `command_iu` structure.
+  - The allocation is done using `kmalloc`, which allocates memory but does not initialize it.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if the allocated memory is not properly initialized before use. In this case, the allocated memory is not initialized, which can lead to undefined behavior if the memory is used without initialization.
+  - This is a classic example of a CWE-787: Out-of-bounds Write vulnerability, where the allocated memory is not properly initialized, leading to potential memory corruption and security vulnerabilities.
+
+### Conclusion:
+The vulnerable behavior in this code is an uninitialized memory allocation. It occurs because the allocated memory is not initialized before use. If the allocated memory is used without initialization, it can lead to undefined behavior, potentially causing memory corruption and security vulnerabilities. Proper initialization of the allocated memory should be done to ensure that it is safe to use.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to ensure that the allocated memory is properly initialized before use. This can be done by using `kzalloc` instead of `kmalloc`, which allocates memory and initializes it to zero. Therefore, the patch should be:
+```
+<     iu = kmalloc(sizeof(*iu) + len, gfp);
+---
+>     iu = kzalloc(sizeof(*iu) + len, gfp);
+```
+By using `kzalloc`, we ensure that the allocated memory is properly initialized to zero, preventing potential memory corruption and security vulnerabilities.

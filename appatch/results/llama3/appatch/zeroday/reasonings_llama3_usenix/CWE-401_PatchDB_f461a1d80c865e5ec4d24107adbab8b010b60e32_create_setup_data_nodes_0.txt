@@ -1,0 +1,35 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+Starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate `data`:
+  - `data` is obtained from `ioremap_cache(pa_data, sizeof(*data))`.
+  - If `ioremap_cache` fails, it returns `NULL`, and `data` will be `NULL`.
+
+- 2: Error Handling:
+  - When `data` is `NULL`, the function sets `error` to `-ENXIO` but does not free the `node` memory allocated earlier.
+  - This is a memory leak because the `node` memory is not released when an error occurs.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises when the function fails to free the `node` memory in case of an error.
+  - This is a classic example of a memory leak vulnerability. Memory leaks can lead to resource exhaustion and potentially cause the system to crash or become unresponsive.
+
+### Conclusion:
+The vulnerable behavior in this code is a memory leak. It occurs because the function does not free the `node` memory when an error occurs. Proper error handling should be added to ensure that the `node` memory is released in case of an error.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add a call to `kfree(node)` to release the `node` memory when an error occurs. This can be done by adding a call to `kfree(node)` before setting the `error` variable. Therefore, the patch should be:
+
+```c
+<             {
+<                 error = -ENXIO;
+---
+>             {
+>                 kfree(node);
+>                 error = -ENXIO;
+```
+
+This patch ensures that the `node` memory is released when an error occurs, preventing a memory leak.

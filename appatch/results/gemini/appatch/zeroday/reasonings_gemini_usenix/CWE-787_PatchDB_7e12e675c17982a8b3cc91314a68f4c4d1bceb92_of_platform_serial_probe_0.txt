@@ -1,0 +1,27 @@
+## Reasoning Steps for Patching CWE-787 in of_platform_serial_probe
+
+Here's a breakdown of the reasoning behind the patch:
+
+**Step 1: Root Cause Analysis**
+
+1. **Uncertain Initialization:** The code allocates memory for `info` using `kmalloc`. However, it doesn't explicitly initialize the contents of this allocated memory. This means the memory might contain leftover data from previous allocations (memory garbage).
+
+2. **Potential Use of Uninitialized Data:** While the provided code snippet doesn't show how `info` is used later, it's crucial to consider what happens if the code accesses and utilizes the members of `info` **without first ensuring they hold intended values.**  Using uninitialized memory is dangerous and can lead to unexpected program behavior.
+
+3. **CWE-787 Vulnerability:** This scenario aligns with CWE-787 (Out-of-bounds Write), as using uninitialized data from `info` can be considered accessing memory outside the bounds of what's been properly set up for the program's use.
+
+**Step 2: Fixing Strategy**
+
+The core issue is the lack of initialization.  The provided patch addresses this directly:
+
+* **From `kmalloc` to `kzalloc`:** The patch replaces `kmalloc` with `kzalloc`. The key difference is that `kzalloc` not only allocates memory but also **zeroes it out (sets all bytes to 0)**. 
+
+**Why this fix works:**
+
+* **Guaranteed Initialization:** By using `kzalloc`, we ensure that all members of the `info` structure start with a known default value (0).  This prevents the use of uninitialized data and mitigates the potential for CWE-787.
+
+**Additional Considerations:**
+
+* **Context Matters:**  While this patch directly addresses the immediate vulnerability, it's essential to analyze the full code context where `info` is used. If there are other places where `info` members are written to before being read, the fix might need adjustments to ensure proper initialization in those specific situations. 
+
+* **Defensive Programming:** It's good practice to initialize data structures explicitly, even when using functions like `kzalloc`.  This makes the code more readable and reduces the chances of introducing errors in the future. 

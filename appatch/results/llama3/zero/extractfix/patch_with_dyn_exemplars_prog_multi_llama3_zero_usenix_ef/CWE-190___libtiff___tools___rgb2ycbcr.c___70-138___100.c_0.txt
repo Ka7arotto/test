@@ -1,0 +1,79 @@
+Step 1: : Input Validation:
+  - The input `optarg` is obtained from the `getopt` function, which is used to parse command-line options.
+  - The `getopt` function does not perform any validation on the input values, it simply returns the value associated with the current option.
+  - The `optarg` variable is a pointer to the value associated with the current option.
+
+- 2: Lack of Input Validation:
+  - The `atoi` function is used to convert the string `optarg` to an integer.
+  - The `atoi` function does not perform any error checking or validation on the input string.
+  - If the input string is not a valid integer, `atoi` will return a value that may not be what the programmer intended.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if the input string `optarg` is not a valid integer or is a very large number.
+  - The `atoi` function will return a value that may not be what the programmer intended, potentially leading to unexpected behavior or errors.
+  - This is a classic example of a CWE-190 (Unremediated Error" or "Unhandled Exception) vulnerability, where an error or exception is not properly handled.
+
+- 4: Unhandled Error:
+  - The code does not check the return value of `atoi` to see if it was successful in converting the string to an integer.
+  - If `atoi` fails to convert the string, it will return a value that may not be what the programmer intended, potentially leading to unexpected behavior or errors.
+
+### Conclusion:
+The vulnerable behavior in this code is an unhandled error. It occurs because the `atoi` function does not perform any error checking or validation on the input string, and the code does not check the return value of `atoi` to see if it was successful in converting the string to an integer. If the input string is not a valid integer or is a very large number, the `atoi` function will return a value that may not be what the programmer intended, potentially leading to unexpected behavior or errors. Proper error checking and validation should be added to ensure that the input string is a valid integer.
+
+To fix this vulnerability, you can use the `strtol` function instead of `atoi`, which allows you to check for errors and handle them properly. Here is an example of how you can do this:
+```
+char *endptr;
+long int value = strtol(optarg, &endptr, 10);
+if (endptr == optarg || *endptr != '\0') {
+    // handle error: input string is not a valid integer
+}
+if (value < INT_MIN || value > INT_MAX) {
+    // handle error: input value is outside the range of int
+}
+horizSubSampling = (int)value;
+```
+The CWE-190 vulnerability at line 28 is due to the use of `atoi` to convert the user-input string `optarg` to an integer, which can lead to a denial-of-service (DoS) attack if the input string is not a valid integer.
+
+Here are five possible patches to fix the vulnerability:
+
+**Patch 1: Use `strtol` instead of `atoi`**
+```
+28 			horizSubSampling = strtol(optarg, NULL, 10);
+```
+`strtol` is a safer alternative to `atoi` as it allows for error checking and returns a `long int` value.
+
+**Patch 2: Use `sscanf` with error checking**
+```
+28 			if (sscanf(optarg, "%d", &horizSubSampling) != 1) {
+29 				usage(-1);
+30 			}
+```
+`sscanf` can be used to parse the input string, and the return value can be checked to ensure that the conversion was successful.
+
+**Patch 3: Use `strtoul` with error checking**
+```
+28 			char *endptr;
+29 			horizSubSampling = strtoul(optarg, &endptr, 10);
+30 			if (endptr == optarg || *endptr != '\0') {
+31 				usage(-1);
+32 			}
+```
+`strtoul` is similar to `strtol`, but it returns an unsigned long integer value. The `endptr` parameter can be used to check for errors.
+
+**Patch 4: Use a dedicated integer parsing function**
+```
+28 			if (!parse_integer(optarg, &horizSubSampling)) {
+29 				usage(-1);
+30 			}
+```
+A dedicated integer parsing function can be implemented to handle errors and invalid inputs.
+
+**Patch 5: Use a library function with input validation**
+```
+28 			if (!get_integer(optarg, &horizSubSampling)) {
+29 				usage(-1);
+30 			}
+```
+A library function like `get_integer` can be used, which provides input validation and error handling.
+
+In all patches, if the input string is not a valid integer, the `usage` function is called with an error code, which will exit the program with an error message.

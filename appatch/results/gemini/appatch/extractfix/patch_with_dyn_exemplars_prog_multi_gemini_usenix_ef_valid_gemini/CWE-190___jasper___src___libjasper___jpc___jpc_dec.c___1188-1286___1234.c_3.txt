@@ -1,0 +1,19 @@
+diff
+--- a/jpc_dec.c
++++ b/jpc_dec.c
+@@ -41,10 +41,14 @@
+ 43 	dec->image = 0;
+ 45 	dec->numhtiles = JPC_CEILDIV(dec->xend - dec->tilexoff, dec->tilewidth);
+ 46 	dec->numvtiles = JPC_CEILDIV(dec->yend - dec->tileyoff, dec->tileheight);
++
++	if (dec->numhtiles > INT_MAX / dec->numvtiles) { // Prevent overflow
++		dec->numhtiles = INT_MAX / dec->numvtiles;
++	}
++
+ 47 	dec->numtiles = dec->numhtiles * dec->numvtiles;
+-
+-
+-	assert(dec->numtiles <= INT_MAX); // Assert that the result doesn't overflow
++	assert(dec->numtiles <= INT_MAX); 
+ 
+ 

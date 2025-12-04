@@ -1,0 +1,48 @@
+The patching process for addressing the CWE-476 (NULL Pointer Dereference) vulnerability can be broken down into two main steps: Root Cause Analysis and Fixing Strategy.
+
+### Step 1: Root Cause Analysis
+
+1. **Understanding the Code Context:**
+   - The function `proc_thermal_add` is responsible for adding a thermal device.
+   - The variable `adev` is of type `struct acpi_device *` and is assigned the result of `ACPI_COMPANION(dev)`.
+
+2. **Identifying the Vulnerable Behavior:**
+   - `adev` is assigned the result of `ACPI_COMPANION(dev)`.
+   - The function `acpi_evaluate_object` is called with `adev->handle` as one of its arguments.
+
+3. **Potential for NULL Pointer Dereference:**
+   - If `ACPI_COMPANION(dev)` returns `NULL`, then `adev` will be `NULL`.
+   - Dereferencing `adev->handle` when `adev` is `NULL` will lead to a NULL pointer dereference, causing undefined behavior, crashes, or potential security vulnerabilities.
+
+4. **Confirming the Vulnerability:**
+   - The line `status = acpi_evaluate_object(adev->handle, "PPCC", NULL, &buf);` is vulnerable because it does not check if `adev` is `NULL` before dereferencing `adev->handle`.
+
+### Step 2: Fixing Strategy
+
+1. **Adding a NULL Check:**
+   - To prevent the NULL pointer dereference, we need to add a check to ensure `adev` is not `NULL` before proceeding to use it.
+
+2. **Returning an Error Code:**
+   - If `adev` is `NULL`, the function should return an appropriate error code to indicate the failure. In this case, `-ENODEV` is used to signify that the device was not found.
+
+3. **Implementing the Patch:**
+   - The patch adds a conditional check after assigning `adev` to ensure it is not `NULL`.
+   - If `adev` is `NULL`, the function returns `-ENODEV` immediately, preventing the subsequent dereference of `adev->handle`.
+
+### Conclusion:
+The patch ensures that the function `proc_thermal_add` does not attempt to dereference a NULL pointer by adding a check for `adev` being `NULL` and returning an error code if it is. This prevents the potential NULL pointer dereference vulnerability.
+
+### Final Patch:
+```diff
+<     adev = ACPI_COMPANION(dev);
+<     status = acpi_evaluate_object(adev->handle, "PPCC", NULL, &buf);
+---
+>     adev = ACPI_COMPANION(dev);
+>     if (!adev)
+>     {
+>         return -ENODEV;
+>     }
+>     status = acpi_evaluate_object(adev->handle, "PPCC", NULL, &buf);
+```
+
+This patch effectively mitigates the CWE-476 vulnerability by ensuring that `adev` is not `NULL` before it is used.

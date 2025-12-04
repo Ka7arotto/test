@@ -1,0 +1,134 @@
+Step 1: - 1. **Input Variables:**
+    - `k`: Represents the chunk number (likely an input).
+    - `n`: Number of chunks to split the file into (likely an input).
+    - `initial_read`: The number of bytes initially read from the file (potentially an input).
+    - `file_size`: Size of the file in bytes (potentially an input).
+
+- 2. **Calculating `start`:**
+    - `start = (k - 1) * (file_size / n)` calculates the starting position of the chunk in the file.
+
+- 3. **`initial_read` and `start` Comparison:**
+    - The `if` statement checks if `initial_read` is not `SIZE_MAX` (a very large value, likely indicating that no data has been read yet) OR if `start` is less than `initial_read`.
+    - This condition is meant to prevent the `memmove` from copying data from an invalid memory address.
+
+- 4. **The Vulnerability:**
+    - The `memmove` function copies data from `buf + start` to `buf`.
+    - The third argument `initial_read - start` determines the number of bytes to copy.
+    - **The vulnerability arises if `initial_read - start` is negative.** This would make `memmove` attempt to copy data from a memory address lower than `buf`, leading to an out-of-bounds access.
+
+- 5. **Determining the Cause:**
+    - The `if` statement ensures that `initial_read - start` is only evaluated if `initial_read` is not `SIZE_MAX` OR if `start` is less than `initial_read`.
+    - However, the `if` statement does not account for the possibility of `start` being larger than `initial_read`.
+    - If `start` is greater than `initial_read`, the `initial_read - start` calculation will result in a negative value, causing the out-of-bounds access in `memmove`.
+
+- 6. **Example Scenario:**
+    - Imagine `initial_read = 10` and `start = 20`.
+    - The `initial_read - start` would be -10, leading `memmove` to attempt copying data from `buf - 10`, which is outside the allocated memory for `buf`, causing an out-of-bounds write.
+
+### Conclusion:
+The vulnerability is due to the absence of a check to ensure that `start` is not greater than `initial_read` before calling `memmove`. This could allow an attacker to manipulate the input values (e.g., `k`, `n`, or `initial_read`) to trigger an out-of-bounds write, potentially causing the program to crash or leading to other security vulnerabilities. A proper check should be added to ensure that `initial_read - start` is always non-negative before invoking `memmove`.
+
+## Five Possible Patches for CWE-787 Vulnerability:
+
+The vulnerability lies in line 15 where `memmove` is used to shift data within the `buf` buffer without proper bounds checking. This can lead to buffer overflows if `start` is negative or `initial_read - start` exceeds the size of the buffer.
+
+Here are five possible patches to address this issue:
+
+**1. Explicit Bounds Checking:**
+
+```diff
+--- a/bytes_chunk_extract.c
++++ b/bytes_chunk_extract.c
+@@ -14,6 +14,10 @@
+ 13   if (initial_read != SIZE_MAX || start < initial_read)
+ 14     {
+ 15       memmove (buf, buf + start, initial_read - start);
++      // Add bounds check to ensure we don't write beyond the buffer
++      if (initial_read - start > bufsize) {
++        die(EXIT_FAILURE, 0, "Buffer overflow");
++      }
+ 16       initial_read -= start;
+ 17     }
+ 
+
+```
+
+**2. Using `memcpy` with Explicit Size:**
+
+```diff
+--- a/bytes_chunk_extract.c
++++ b/bytes_chunk_extract.c
+@@ -14,7 +14,7 @@
+ 13   if (initial_read != SIZE_MAX || start < initial_read)
+ 14     {
+ 15       memmove (buf, buf + start, initial_read - start);
+-      // Add bounds check to ensure we don't write beyond the buffer
++      // Use memcpy with explicit size for safer memory handling
+       if (initial_read - start > bufsize) {
+         die(EXIT_FAILURE, 0, "Buffer overflow");
+       }
+
+```
+
+**3. Using `memmove` with `min` Function:**
+
+```diff
+--- a/bytes_chunk_extract.c
++++ b/bytes_chunk_extract.c
+@@ -14,7 +14,7 @@
+ 13   if (initial_read != SIZE_MAX || start < initial_read)
+ 14     {
+ 15       memmove (buf, buf + start, initial_read - start);
+-      // Use memcpy with explicit size for safer memory handling
++      // Use min function to ensure we don't write beyond the buffer
+       if (initial_read - start > bufsize) {
+         die(EXIT_FAILURE, 0, "Buffer overflow");
+       }
+
+```
+
+**4. Validating `start` Before Shifting:**
+
+```diff
+--- a/bytes_chunk_extract.c
++++ b/bytes_chunk_extract.c
+@@ -14,6 +14,10 @@
+ 13   if (initial_read != SIZE_MAX || start < initial_read)
+ 14     {
+ 15       memmove (buf, buf + start, initial_read - start);
++      // Validate 'start' before shifting data
++      if (start < 0) {
++        die(EXIT_FAILURE, 0, "Invalid start position");
++      }
+       // Add bounds check to ensure we don't write beyond the buffer
+       if (initial_read - start > bufsize) {
+         die(EXIT_FAILURE, 0, "Buffer overflow");
+
+```
+
+**5. Using a Temporary Buffer:**
+
+```diff
+--- a/bytes_chunk_extract.c
++++ b/bytes_chunk_extract.c
+@@ -14,10 +14,12 @@
+ 13   if (initial_read != SIZE_MAX || start < initial_read)
+ 14     {
+ 15       memmove (buf, buf + start, initial_read - start);
+-      // Add bounds check to ensure we don't write beyond the buffer
+-      if (initial_read - start > bufsize) {
+-        die(EXIT_FAILURE, 0, "Buffer overflow");
+-      }
++      // Use a temporary buffer for safe data manipulation
++      char temp_buf[bufsize];
++      memcpy(temp_buf, buf + start, initial_read - start);
++      memcpy(buf, temp_buf, initial_read - start);
++
++
+ 16       initial_read -= start;
+ 17     }
+ 
+
+```
+
+**Note:** These patches are examples and may need adjustments depending on the specific context of the code. The best solution depends on the overall design of the code and the desired level of safety. It's important to carefully consider the potential consequences of each patch before applying it.

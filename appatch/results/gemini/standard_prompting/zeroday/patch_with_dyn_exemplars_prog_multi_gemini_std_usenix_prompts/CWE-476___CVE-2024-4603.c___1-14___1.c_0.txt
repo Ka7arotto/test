@@ -1,0 +1,26 @@
+
+
+
+Q: Given the following code slice:
+```
+1 static struct extent_buffer *__alloc_extent_buffer(struct extent_io_tree *tree, u64 start, unsigned long len, gfp_t mask)
+5     eb = kmem_cache_zalloc(extent_buffer_cache, mask);
+6     eb->start = start;```
+which has a CWE-476 vulnerability at line:
+```
+6     eb->start = start;
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+**Step 1: Root Cause Analysis**: The vulnerability lies in the fact that the variable `eb` is not checked for a `NULL` value before attempting to access its `start` member. This can lead to a null pointer dereference, which is a CWE-476 vulnerability.
+
+**Step 2: Fixing Strategy**: The patch fixes the vulnerability by adding a check for a `NULL` value after the call to `kmem_cache_zalloc()`. If `eb` is `NULL`, the function returns without accessing its members, avoiding the null pointer dereference.
+
+The patched code:
+
+```c
+eb = kmem_cache_zalloc(extent_buffer_cache, mask);
+if (eb == NULL) {
+    return NULL;
+}
+eb->start = start;
+```

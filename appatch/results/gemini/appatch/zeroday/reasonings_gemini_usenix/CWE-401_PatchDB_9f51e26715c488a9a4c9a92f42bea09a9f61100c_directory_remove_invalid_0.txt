@@ -1,0 +1,39 @@
+## Reasoning for the Patch: CWE-401 (Memory Leak)
+
+Let's break down the reasoning behind the patch for the CWE-401 (Memory Leak) vulnerability in the given code.
+
+**Step 1: Identify Resource Allocation**
+
+* On line 5, `smartlist_t *nodes = smartlist_create();` allocates memory for a new smartlist and assigns it to the `nodes` pointer.
+
+**Step 2: Analyze Resource Usage**
+
+* The `nodes` smartlist is populated with all elements from `nodelist_get_list()` on line 6.
+* The code iterates through the `nodes` list using `SMARTLIST_FOREACH_BEGIN` and `SMARTLIST_FOREACH_END`.
+* Importantly, the code **does not free or release the memory** allocated for the `nodes` smartlist after using it.
+
+**Step 3: Recognize the Memory Leak**
+
+* When the function `directory_remove_invalid()` exits, the `nodes` pointer goes out of scope. 
+* Since the allocated memory for the smartlist is not freed, it becomes **unreachable**. 
+* This results in a **memory leak**, where a portion of memory is no longer used but cannot be allocated again.
+
+**Step 4: Implement the Patch**
+
+To fix the memory leak, the allocated memory for the `nodes` smartlist must be released before the function ends. This is achieved by adding the following line after the last use of `nodes`:
+
+```c
+smartlist_free(nodes); 
+```
+
+**The complete patched code section:**
+
+```c
+    routerlist_assert_ok(rl);
+    smartlist_free(nodes); // Patch: Free the allocated memory
+}
+```
+
+**Conclusion:**
+
+By adding `smartlist_free(nodes);` we ensure that the memory allocated for the `nodes` smartlist is released after it is no longer needed. This prevents the memory leak and makes the code more robust and less prone to memory exhaustion issues over time. 

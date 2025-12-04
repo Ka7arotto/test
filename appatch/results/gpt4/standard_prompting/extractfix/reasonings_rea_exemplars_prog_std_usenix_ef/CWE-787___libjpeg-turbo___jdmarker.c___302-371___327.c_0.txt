@@ -1,0 +1,20 @@
+The CWE-787 vulnerability, also known as "Out-of-bounds Write," occurs when a program writes data past the end, or before the beginning, of the intended buffer. This can lead to data corruption, a crash, or code execution vulnerabilities.
+
+In the provided code snippet, the vulnerability arises from the loop at lines 25-26, where the array `cinfo->cur_comp_info` is being accessed and modified. The critical issue here is that the loop iterates from `0` to `cinfo->num_components - 1`, and within the loop, each element of the array `cinfo->cur_comp_info[i]` is set to `NULL`.
+
+The vulnerability specifically stems from the assumption that `cinfo->num_components` will not exceed the length of the array `cinfo->cur_comp_info`, which has a defined length of `MAX_COMPS_IN_SCAN`. If `cinfo->num_components` is greater than `MAX_COMPS_IN_SCAN`, the loop will write past the end of the `cinfo->cur_comp_info` array, leading to an out-of-bounds write. This can corrupt memory and potentially lead to further vulnerabilities such as buffer overflow attacks.
+
+To address this vulnerability, the code should include a check to ensure that `cinfo->num_components` does not exceed `MAX_COMPS_IN_SCAN` before entering the loop. For example:
+
+```c
+if (cinfo->num_components > MAX_COMPS_IN_SCAN) {
+    // Handle error: number of components exceeds the capacity of the array
+    return ERROR;
+}
+
+for (i = 0; i < cinfo->num_components; i++) {
+    cinfo->cur_comp_info[i] = NULL;
+}
+```
+
+This check prevents the out-of-bounds write by ensuring that the loop does not attempt to access indices of `cinfo->cur_comp_info` that are out of its defined range. This is a critical step in ensuring the safety and reliability of the code, especially in scenarios where `cinfo->num_components` might be dynamically determined or influenced by external inputs.

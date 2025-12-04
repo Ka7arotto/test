@@ -1,0 +1,24 @@
+Let's break down the reasoning behind the patch for the CWE-476 (NULL Pointer Dereference) vulnerability.
+
+**Step 1. Root Cause Analysis: Tracing the Potential Issue**
+
+- **Line 4: `dlen = strlen(display);`**: The vulnerability lies here. The `strlen` function is used to determine the length of the string `display`. However, there's no check to ensure that `display` itself is not a NULL pointer.
+
+- **Consequence of a NULL `display`**: If `display` is NULL, calling `strlen(display)` will lead to a segmentation fault or similar error. This is because `strlen` attempts to access memory starting from the address pointed to by `display`, and accessing memory at address 0 (NULL) is generally forbidden.
+
+**Step 2. Fixing Strategy: Preventing the NULL Dereference**
+
+- **Adding a NULL Check**:  The patch addresses the root cause directly by introducing a safety check:
+
+```
+>     if (display == NULL)
+>     {
+>         return 0;
+>     }
+```
+
+- **Early Return**: If `display` is indeed NULL, the function now returns `0` (or any other appropriate value signaling an invalid input). This prevents the execution flow from reaching the `strlen` call, thus avoiding the potential crash.
+
+**In Summary**
+
+The original code was vulnerable to a NULL pointer dereference because it didn't validate the input pointer `display`. The patch strengthens the code by adding a crucial NULL check before using `display` with `strlen`, preventing undefined behavior and potential crashes. 

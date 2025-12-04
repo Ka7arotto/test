@@ -1,0 +1,133 @@
+Step 1: : Input Validation:
+  - The input `optarg` is obtained from the `getopt` function, which is used to parse command-line options.
+  - The `getopt` function does not perform any validation on the input values, it simply returns the value associated with the current option.
+  - The `optarg` variable is a pointer to the value associated with the current option.
+
+- 2: Lack of Input Validation:
+  - The `atoi` function is used to convert the string `optarg` to an integer.
+  - The `atoi` function does not perform any error checking or validation on the input string.
+  - If the input string is not a valid integer, `atoi` will return a value that may not be what the programmer intended.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if the input string `optarg` is not a valid integer or is a very large number.
+  - The `atoi` function will return a value that may not be what the programmer intended, potentially leading to unexpected behavior or errors.
+  - This is a classic example of a CWE-190 (Unremediated Error" or "Unhandled Exception) vulnerability, where an error or exception is not properly handled.
+
+- 4: Unhandled Error:
+  - The code does not check the return value of `atoi` to see if it was successful in converting the string to an integer.
+  - If `atoi` fails to convert the string, it will return a value that may not be what the programmer intended, potentially leading to unexpected behavior or errors.
+
+### Conclusion:
+The vulnerable behavior in this code is an unhandled error. It occurs because the `atoi` function does not perform any error checking or validation on the input string, and the code does not check the return value of `atoi` to see if it was successful in converting the string to an integer. If the input string is not a valid integer or is a very large number, the `atoi` function will return a value that may not be what the programmer intended, potentially leading to unexpected behavior or errors. Proper error checking and validation should be added to ensure that the input string is a valid integer.
+
+To fix this vulnerability, you can use the `strtol` function instead of `atoi`, which allows you to check for errors and handle them properly. Here is an example of how you can do this:
+```
+char *endptr;
+long int value = strtol(optarg, &endptr, 10);
+if (endptr == optarg || *endptr != '\0') {
+    // handle error: input string is not a valid integer
+}
+if (value < INT_MIN || value > INT_MAX) {
+    // handle error: input value is outside the range of int
+}
+horizSubSampling = (int)value;
+```
+Here are five possible patches for the CWE-190 vulnerability:
+
+**Patch 1: Using strtol with error checking**
+```c
+char *endptr;
+long int value = strtol(optarg, &endptr, 10);
+if (endptr == optarg || *endptr != '\0') {
+    fprintf(stderr, "Error: invalid input string\n");
+    exit(1);
+}
+if (value < INT_MIN || value > INT_MAX) {
+    fprintf(stderr, "Error: input value is outside the range of int\n");
+    exit(1);
+}
+horizSubSampling = (int)value;
+```
+
+**Patch 2: Using strtol with error checking and custom error handling**
+```c
+char *endptr;
+long int value = strtol(optarg, &endptr, 10);
+if (endptr == optarg || *endptr != '\0') {
+    handle_invalid_input_error();
+}
+if (value < INT_MIN || value > INT_MAX) {
+    handle_out_of_range_error();
+}
+horizSubSampling = (int)value;
+
+// Custom error handling functions
+void handle_invalid_input_error() {
+    // Handle error: input string is not a valid integer
+}
+
+void handle_out_of_range_error() {
+    // Handle error: input value is outside the range of int
+}
+```
+
+**Patch 3: Using sscanf with error checking**
+```c
+int result = sscanf(optarg, "%d", &horizSubSampling);
+if (result != 1) {
+    fprintf(stderr, "Error: invalid input string\n");
+    exit(1);
+}
+```
+
+**Patch 4: Using atoi with error checking and custom error handling**
+```c
+int value = atoi(optarg);
+if (value == 0 && optarg[0] != '0') {
+    handle_invalid_input_error();
+}
+if (value < INT_MIN || value > INT_MAX) {
+    handle_out_of_range_error();
+}
+horizSubSampling = value;
+
+// Custom error handling functions
+void handle_invalid_input_error() {
+    // Handle error: input string is not a valid integer
+}
+
+void handle_out_of_range_error() {
+    // Handle error: input value is outside the range of int
+}
+```
+
+**Patch 5: Using a custom parsing function with error checking**
+```c
+int parse_int(const char *str) {
+    int value = 0;
+    int sign = 1;
+    if (*str == '-') {
+        sign = -1;
+        str++;
+    }
+    while (*str >= '0' && *str <= '9') {
+        value = value * 10 + (*str - '0');
+        str++;
+    }
+    if (*str != '\0') {
+        return -1; // Error: invalid input string
+    }
+    return sign * value;
+}
+
+int value = parse_int(optarg);
+if (value == -1) {
+    fprintf(stderr, "Error: invalid input string\n");
+    exit(1);
+}
+if (value < INT_MIN || value > INT_MAX) {
+    fprintf(stderr, "Error: input value is outside the range of int\n");
+    exit(1);
+}
+horizSubSampling = value;
+```

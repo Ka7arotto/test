@@ -1,0 +1,91 @@
+The provided code snippet seems to be part of an image resizing function, likely using a nearest-neighbor or similar algorithm. The comment "fixed CWE-787" indicates a previous vulnerability related to out-of-bounds write (CWE-787: Out-of-bounds Write). The vulnerability was likely in how `nrows` was incremented and used to access `rows`.
+
+Here are five possible code completions that address the vulnerability:
+
+**1. Limit `nrows` and check for overflow:**
+
+```c
+	    sy++;
+	    if (nrows < 255 && sy < rh) { 
+	        rows[nrows++] = br + bpr * sy;
+	    } else {
+	        fprintf(stderr, "Warning: Image downscaling exceeded buffer\n");
+	        break; 
+	    }
+```
+
+This approach limits `nrows` to a maximum of 255 to prevent overflowing the `rows` array. It also checks if `sy` stays within the bounds of the source image height (`rh`). If either condition fails, it prints a warning and stops adding rows.
+
+**2. Dynamically allocate `rows`:**
+
+```c
+    uint8** rows = (uint8**)malloc(sizeof(uint8*) * rh);
+    if (rows == NULL) {
+        // Handle allocation error
+    }
+    // ... inside the loop:
+	sy++;
+	if (sy < rh) {
+	    rows[nrows++] = br + bpr * sy;
+	} else {
+	    break;
+	}
+    // ... after the loop:
+    free(rows);
+```
+
+This solution dynamically allocates memory for `rows` based on the source image height, eliminating the fixed-size limitation. 
+
+**3.  Calculate required `rows` size beforehand:**
+
+```c
+    uint32 max_rows = rh / step + (rh % step != 0); // Calculate maximum rows needed
+    uint8* rows[max_rows]; 
+    // ... inside the loop:
+    sy++;
+    if (nrows < max_rows && sy < rh) {
+        rows[nrows++] = br + bpr * sy;
+    } else {
+        break;
+    }
+```
+
+Here, the maximum number of rows needed is calculated upfront, and `rows` is declared with that size. This avoids dynamic allocation while still preventing out-of-bounds access.
+
+**4.  Resize `rows` dynamically:**
+
+```c
+    uint32 rows_capacity = 1;
+    uint8** rows = (uint8**)malloc(sizeof(uint8*) * rows_capacity);
+    // ... inside the loop:
+	sy++;
+	if (sy < rh) {
+	    if (nrows >= rows_capacity) {
+	        rows_capacity *= 2; 
+	        rows = (uint8**)realloc(rows, sizeof(uint8*) * rows_capacity);
+	        // Handle realloc failure
+	    }
+        rows[nrows++] = br + bpr * sy;
+	} else {
+	    break;
+	}
+    // ... after the loop:
+    free(rows);
+```
+
+This solution dynamically resizes the `rows` array whenever its capacity is reached. While more complex, it offers flexibility for varying image sizes.
+
+**5.  Avoid storing rows, process pixels directly:**
+
+```c
+	sy++;
+	if (sy < rh) {
+	    // Directly copy/process pixels from br + bpr * sy to thumbnail
+	} else {
+	    break;
+	}
+```
+
+This approach eliminates the `rows` array altogether. Instead, it processes and copies pixels directly from the source image buffer (`br`) to the thumbnail buffer based on calculated offsets.
+
+The best solution depends on the overall program design and performance requirements. Using dynamic allocation or direct pixel processing might be preferable for larger images or memory-constrained environments.

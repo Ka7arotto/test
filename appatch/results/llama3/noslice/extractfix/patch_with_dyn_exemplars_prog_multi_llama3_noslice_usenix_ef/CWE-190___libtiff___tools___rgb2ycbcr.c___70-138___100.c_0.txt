@@ -1,0 +1,128 @@
+Step 1: : Validate `optarg`:
+  - `optarg` is obtained from the `getopt` function, which parses the command-line arguments.
+  - We need to consider what values `optarg` might take. In this case, `optarg` is expected to be a string representing an integer value.
+
+- 2: Use of `atoi` function:
+  - The `atoi` function is used to convert the string `optarg` to an integer.
+  - However, `atoi` does not perform any error checking. If `optarg` is not a valid integer string, `atoi` will return 0, but it will not indicate whether an error occurred.
+
+- 3: Lack of Error Handling:
+  - The code does not check whether the conversion to integer was successful.
+  - If `optarg` is not a valid integer string, `horizSubSampling` will be set to 0, which may not be the intended behavior.
+
+- 4: Potential Vulnerability:
+  - The vulnerability arises if `optarg` is not a valid integer string.
+  - In this case, the program may enter an infinite loop or produce unexpected results, leading to a denial-of-service (DoS) condition.
+
+- 5: CWE-190: Divide By Zero:
+  - Although not explicitly shown in this code snippet, if `horizSubSampling` is used as a divisor in a subsequent calculation, a division by zero error may occur if `optarg` is not a valid integer string.
+  - This is a classic example of a CWE-190 vulnerability, where a division by zero error can occur due to a lack of error handling.
+
+### Conclusion:
+The vulnerable behavior in this code is a CWE-190 vulnerability. It occurs because the `atoi` function does not perform any error checking, and the code does not validate the result of the conversion. If `optarg` is not a valid integer string, the program may enter an infinite loop or produce unexpected results, leading to a denial-of-service (DoS) condition. Proper error handling should be added to ensure that `optarg` is a valid integer string before attempting to convert it to an integer.
+Here are five possible patches for the CWE-190 vulnerability:
+
+### Patch 1: Using `strtol` instead of `atoi`
+
+```c
+#include <errno.h>
+#include <stdlib.h>
+
+// ...
+
+case 'h':
+    char *endptr;
+    errno = 0;
+    long val = strtol(optarg, &endptr, 10);
+    if (errno != 0 || *endptr != '\0' || val < 0) {
+        usage(-1);
+    }
+    horizSubSampling = (int)val;
+    break;
+```
+
+In this patch, we use the `strtol` function instead of `atoi`. `strtol` performs error checking and returns a `long` value, which we then cast to an `int`. We also check for errors by verifying that `errno` is 0 and that the entire string was converted.
+
+### Patch 2: Using `sscanf` instead of `atoi`
+
+```c
+// ...
+
+case 'h':
+    int val;
+    if (sscanf(optarg, "%d", &val) != 1) {
+        usage(-1);
+    }
+    horizSubSampling = val;
+    break;
+```
+
+In this patch, we use the `sscanf` function instead of `atoi`. `sscanf` performs error checking and returns the number of successful conversions. We check that exactly one conversion was successful.
+
+### Patch 3: Adding error handling to `atoi`
+
+```c
+// ...
+
+case 'h':
+    int val = atoi(optarg);
+    if (val == 0 && optarg[0] != '0') {
+        usage(-1);
+    }
+    horizSubSampling = val;
+    break;
+```
+
+In this patch, we add error handling to the `atoi` function. We check that if the result is 0, the input string is not a valid integer string (i.e., it does not start with '0'). If the input string is not valid, we call `usage(-1)`.
+
+### Patch 4: Using a custom function to convert string to integer
+
+```c
+int convert_string_to_int(const char *str) {
+    int val = 0;
+    int sign = 1;
+    if (*str == '-') {
+        sign = -1;
+        str++;
+    }
+    while (*str >= '0' && *str <= '9') {
+        val = val * 10 + (*str - '0');
+        str++;
+    }
+    if (*str != '\0') {
+        return -1; // error
+    }
+    return sign * val;
+}
+
+// ...
+
+case 'h':
+    int val = convert_string_to_int(optarg);
+    if (val == -1) {
+        usage(-1);
+    }
+    horizSubSampling = val;
+    break;
+```
+
+In this patch, we define a custom function `convert_string_to_int` to convert a string to an integer. This function performs error checking and returns -1 if the input string is not a valid integer string.
+
+### Patch 5: Using a library function to convert string to integer
+
+```c
+#include <libgen.h>
+
+// ...
+
+case 'h':
+    char *endptr;
+    int val = strtol(optarg, &endptr, 10);
+    if (endptr == optarg || *endptr != '\0') {
+        usage(-1);
+    }
+    horizSubSampling = val;
+    break;
+```
+
+In this patch, we use the `strtol` function from the `libgen` library to convert the string to an integer. This function performs error checking and returns a `long` value, which we then cast to an `int`. We also check that the entire string was converted.

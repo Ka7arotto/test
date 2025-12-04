@@ -1,0 +1,28 @@
+## Reasoning for Patching CWE-787 in `kobject_get_path`
+
+Here's a breakdown of the reasoning behind the provided patch:
+
+**Step 1: Root Cause Analysis**
+
+1. **Potential Zero Length:** The `get_kobj_path_length(kobj)` function could potentially return 0. This might happen if the `kobject` doesn't have an associated path.
+
+2. **Zero Allocation:** Calling `kmalloc(0, gfp_mask)` is problematic. While the behavior might vary, it can lead to:
+    - Returning a valid but non-usable pointer (not NULL, but points to a zero-sized memory block).
+    - Returning NULL, potentially causing issues if not handled explicitly.
+
+3. **Unhandled NULL Pointer:**  The original code doesn't check if `kmalloc` was successful. If `kmalloc(0, gfp_mask)` returns NULL (or a non-usable pointer) and the code proceeds without checking, it can lead to a NULL pointer dereference later when trying to use `path`.
+
+**Step 2: Fixing Strategy**
+
+The patch addresses these issues by:
+
+1. **Checking for Zero Length:**  Immediately after getting the `len` from `get_kobj_path_length`, it explicitly checks if `len` is 0.
+
+2. **Handling Zero Length:** If `len` is 0, the function now takes the safe route by:
+    - Returning `NULL`. This signals to the caller that there was no valid path to retrieve.
+
+3. **Allocating Only When Necessary:**  `kmalloc` is only called if `len` is greater than 0, ensuring a valid size is passed for allocation.
+
+**Conclusion:**
+
+The patch effectively eliminates the CWE-787 vulnerability by preventing a potential out-of-bounds write (in this case, a write to a potentially zero-sized or NULL memory area). It ensures that memory allocation (`kmalloc`) is only attempted with a valid size and handles the case where there might not be a path to retrieve. This makes the code more robust and less prone to crashes or unexpected behavior. 

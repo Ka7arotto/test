@@ -1,0 +1,24 @@
+The CWE-125 vulnerability, also known as "Out-of-bounds Read," occurs when the software reads data past the end, or before the beginning, of the intended buffer. This can lead to crashes, information leaks, or the execution of arbitrary code.
+
+In the provided code snippet, the vulnerability is present in the line:
+```c
+44       while (i < size && sieve[++i] == 0)
+```
+Here's the breakdown of why this line is problematic:
+
+1. **Pre-increment Operator**: The expression `++i` increments the value of `i` before it is used in the condition. This means that `i` is incremented first, and then `sieve[i]` is accessed.
+
+2. **Condition Check Order**: The condition checks if `i < size` and then accesses `sieve[i]`. However, because `i` is incremented before the check (`i < size`), there is a potential that `i` could equal `size` when `sieve[i]` is accessed. This would lead to accessing `sieve[size]`, which is out-of-bounds as valid indices for `sieve` are from `0` to `size-1`.
+
+3. **Potential Out-of-bounds Access**: If the loop condition `i < size` is true and `i` is incremented to `size`, the subsequent access `sieve[i]` attempts to read beyond the allocated memory for `sieve`, leading to undefined behavior. This could potentially read garbage values or cause a segmentation fault if the memory access violates protection boundaries.
+
+To fix this vulnerability, the increment of `i` should be handled inside the loop body after the array access has been safely performed with a valid index. Here's a safer version of the loop:
+```c
+44       while (i < size && sieve[i] == 0)
+45           i++;
+```
+In this corrected version:
+- The check `i < size` ensures that all accesses to `sieve[i]` are within bounds.
+- The increment `i++` is moved to after the array access, ensuring that `i` only increments if it was previously confirmed to be within the valid range.
+
+This change prevents the out-of-bounds read by ensuring that every access to the array `sieve` is checked against the upper limit `size` before it is performed.

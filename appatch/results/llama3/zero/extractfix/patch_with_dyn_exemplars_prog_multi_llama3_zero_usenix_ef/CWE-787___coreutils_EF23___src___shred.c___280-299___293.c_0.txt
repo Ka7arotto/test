@@ -1,0 +1,52 @@
+Step 1: : Validate `size` and `i`:
+  - `size` is the input parameter that determines the size of the memory region being written to.
+  - `i` is the loop counter that starts at 3 and doubles in each iteration until it is no longer less than `size / 2`.
+  - We need to consider what happens when `i` is greater than `size - i`, which is the remaining space in the buffer.
+
+- 2: Memory Access and Indexing:
+  - The `memcpy` function is used to copy `i` bytes from the beginning of the buffer (`r`) to a location `i` bytes from the beginning of the buffer (`r + i`).
+  - If `i` is greater than `size - i`, then the destination address `r + i` will overlap with the source address `r`, and the `memcpy` function will write past the end of the buffer.
+  - This is because `memcpy` does not perform any bounds checking, and it will happily overwrite memory beyond the end of the buffer.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `i` exceeds `size - i`, which results in writing past the end of the buffer.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated buffer can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `i` is within the bounds of the allocated buffer size `size`. If `i` is greater than `size - i`, the `memcpy` function will write past the end of the buffer, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `i` does not exceed `size - i`.
+
+Note: The loop condition `i < size / 2` does not prevent the overflow because it only checks if `i` is less than half of `size`, not if `i` is less than `size - i`.
+Here are five possible patches for the CWE-787 vulnerability at line 12:
+
+**Patch 1: Check for overflow before calling memcpy**
+```
+12     if (i + i <= size) memcpy (r + i, r, i);
+```
+This patch checks if the destination buffer has enough space to hold the copied data before calling `memcpy`.
+
+**Patch 2: Use a safe copy function**
+```
+12     memcpy_s (r + i, size - i, r, i);
+```
+This patch uses the `memcpy_s` function, which is a safer version of `memcpy` that checks for buffer overflow.
+
+**Patch 3: Limit the copy size to the remaining buffer size**
+```
+12     memcpy (r + i, r, size - i);
+```
+This patch limits the copy size to the remaining buffer size, preventing a buffer overflow.
+
+**Patch 4: Use a loop instead of memcpy**
+```
+12     for (size_t j = 0; j < i; j++) r[i + j] = r[j];
+```
+This patch replaces the `memcpy` call with a loop that copies the data element-wise, preventing a buffer overflow.
+
+**Patch 5: Check for integer overflow before the loop**
+```
+11     if (i > size / 2) break;
+12     memcpy (r + i, r, i);
+```
+This patch checks for integer overflow before the loop, preventing the `i` variable from growing too large and causing a buffer overflow.
+
+Note that these patches assume that the `SECTOR_SIZE` constant is a multiple of 2, as implied by the loop increment `i *= 2`. If this is not the case, additional checks may be necessary to prevent buffer overflows.

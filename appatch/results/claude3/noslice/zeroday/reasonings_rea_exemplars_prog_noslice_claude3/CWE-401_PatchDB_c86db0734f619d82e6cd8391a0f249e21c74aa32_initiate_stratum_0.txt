@@ -1,0 +1,7 @@
+The root cause of the CWE-401 (Missing Release of Memory after Effective Lifetime) vulnerability in the given code is that the memory allocated by `strdup` at line 76 is not properly released or freed before the function exits or in case of an error condition.
+
+The code allocates memory for `pool->nonce1` using `strdup`, which duplicates the string returned by `json_string_value(json_array_get(res_val, 1))`. However, there is no corresponding `free` or memory release operation for `pool->nonce1` in case the function exits due to an error condition (e.g., at lines 62, 67, 73, 79, or 85) or when the function returns successfully.
+
+This can lead to a memory leak, as the allocated memory for `pool->nonce1` is not released after its effective lifetime, which is a violation of CWE-401. The memory leak can potentially cause resource exhaustion and other related issues if the function is called repeatedly without properly freeing the allocated memory.
+
+To fix this vulnerability, the code should include a proper memory release operation (e.g., `free(pool->nonce1)`) in the error handling cases and before the function returns successfully.

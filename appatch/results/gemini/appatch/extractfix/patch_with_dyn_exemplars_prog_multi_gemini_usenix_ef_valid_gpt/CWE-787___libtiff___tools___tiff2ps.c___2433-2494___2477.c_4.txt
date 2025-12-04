@@ -1,0 +1,25 @@
+diff
+--- a/libtiff/tif_ps.c
++++ b/libtiff/tif_ps.c
+@@ -57,11 +57,13 @@
+                                  case 1: c = *cp++; PUTHEX(c,fd);
+                                  }
+                                  cp += es;
+-                                 if (cp > tf_buf + tf_bytesperrow || cp < tf_buf) {
+-                                        TIFFError(filename, 
+-                                                  "Invalid color channel configuration. "
+-                                                  "Pointer is out of bounds.");
+-                                        _TIFFfree((char *) tf_buf);
+-                                        return;
++                                 if (cp > tf_buf + tf_bytesperrow) {
++                                    TIFFError(filename, "Color channel configuration error: Pointer overrun.");
++                                    _TIFFfree((char *) tf_buf);
++                                    return;
++                                 }
++                                 if (cp < tf_buf) {
++                                    TIFFError(filename, "Color channel configuration error: Pointer underrun.");
++                                    _TIFFfree((char *) tf_buf);
+                                     TIFFError(filename, "Color channel configuration error");
+                                 }
+ 58                         }
+

@@ -1,0 +1,5 @@
+Root Cause Analysis: The CWE-787 (Out-of-bounds Write) vulnerability exists in the code because the value of `info.rule_cnt` is not properly validated before allocating memory for `rule_buf`. The code checks if `info.rule_cnt` is less than or equal to `KMALLOC_MAX_SIZE / sizeof(u32)`, but it does not check if `info.rule_cnt` is greater than 0.
+
+If `info.rule_cnt` is 0, then `kmalloc(info.rule_cnt * sizeof(u32), GFP_USER)` will allocate 0 bytes of memory, which can lead to a null pointer dereference or other undefined behavior when `rule_buf` is used later in the code.
+
+To mitigate this vulnerability, the code should check if `info.rule_cnt` is greater than 0 before allocating memory for `rule_buf`. Additionally, it should also validate that `info.rule_cnt` is within a reasonable range to prevent excessive memory allocation.

@@ -1,0 +1,1 @@
+which must be a multiple of 16.* Ncol represents the visible (non padding) portion.  

@@ -1,0 +1,30 @@
+## Root Cause Analysis of CWE-787 Vulnerability
+
+The code snippet exhibits a CWE-787 vulnerability, specifically **"Out-of-bounds write"**, at line 26:
+
+```c
+cinfo->cur_comp_info[i] = NULL;
+```
+
+Here's the breakdown of the root cause:
+
+1. **Unbounded Loop:** The `for` loop at line 25 iterates from `i = 0` to `i < cinfo->num_components`. This loop iterates through all components in the image.
+2. **Potential Overflow:** The variable `cinfo->num_components` represents the total number of components in the image. However, the array `cinfo->cur_comp_info` has a fixed size of `MAX_COMPS_IN_SCAN`.  
+3. **Array Access Out of Bounds:** If the number of components in the image (`cinfo->num_components`) exceeds the maximum allowed components (`MAX_COMPS_IN_SCAN`), the loop will access elements beyond the bounds of the array `cinfo->cur_comp_info`.
+4. **Memory Corruption:** Accessing memory beyond the array bounds can lead to undefined behavior, including:
+   - **Overwriting adjacent memory:** This can corrupt data belonging to other variables or even critical system structures.
+   - **Segmentation fault:**  Attempting to access memory that doesn't belong to the program, leading to a crash.
+   - **Unpredictable behavior:**  The program might behave erratically, making it difficult to diagnose and fix.
+
+**In Summary:**
+
+The vulnerability arises because the code fails to ensure that the loop index `i` stays within the bounds of the array `cinfo->cur_comp_info`.  If the number of components exceeds the array size, the code will attempt to write to memory locations that are not allocated for the array, potentially causing severe consequences like memory corruption, crashes, or security vulnerabilities.
+
+**Recommendation:**
+
+To fix the CWE-787 vulnerability, the code should be modified to prevent out-of-bounds access. This could be done by:
+
+* **Checking `i` against `MAX_COMPS_IN_SCAN` before accessing `cinfo->cur_comp_info`**: This would ensure that the loop only iterates up to the maximum number of components allowed by the array size.
+* **Dynamically resizing `cinfo->cur_comp_info`:** If the number of components exceeds `MAX_COMPS_IN_SCAN`, the code could reallocate the array to accommodate the required size.
+
+By taking steps to prevent out-of-bounds access, the code can be made more robust and secure. 

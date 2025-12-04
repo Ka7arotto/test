@@ -1,0 +1,37 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `output` allocation:
+  - `output` is allocated using `uml_kmalloc` with a size of `output_len`.
+  - If the allocation fails, `output` will be `NULL`, and an error message is printed.
+
+- 2: Usage of `output`:
+  - After allocation, `output` is used as an argument to the `change_tramp` function.
+  - If `change_tramp` fails (i.e., returns a negative value), the function returns without freeing `output`.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises when `change_tramp` fails, and the function returns without freeing `output`.
+  - This results in a memory leak, as the allocated memory is not released back to the system.
+
+- 4: CWE-401 (Memory Leak) Vulnerability:
+  - CWE-401 occurs when memory is allocated but not properly released, leading to memory leaks.
+  - In this case, the memory leak occurs when `change_tramp` fails, and the function returns without freeing `output`.
+
+### Conclusion:
+The vulnerable behavior in this code is a memory leak. It occurs because the function does not properly release the allocated memory when `change_tramp` fails. This can lead to memory exhaustion and potentially cause the system to crash or become unresponsive.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy for memory leaks is to ensure that all allocated memory is properly released. In this case, the fix is to add a call to `kfree` to release the allocated memory before returning from the function. Therefore, the patch should be:
+
+```c
+<     {
+<         return;
+---
+>     {
+>         kfree(output);
+>         return;
+```
+
+This patch ensures that the allocated memory is properly released, preventing the memory leak and fixing the CWE-401 vulnerability.

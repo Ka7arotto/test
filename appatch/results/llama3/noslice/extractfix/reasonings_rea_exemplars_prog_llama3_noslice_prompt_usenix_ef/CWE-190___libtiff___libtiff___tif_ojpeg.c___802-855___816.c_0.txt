@@ -1,0 +1,93 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 static int
+2 OJPEGDecodeRaw(TIFF* tif, uint8* buf, tmsize_t cc)
+3 {
+4 	static const char module[]="OJPEGDecodeRaw";
+5 	OJPEGState* sp=(OJPEGState*)tif->tif_data;
+6 	uint8* m;
+7 	tmsize_t n;
+8 	uint8* oy;
+9 	uint8* ocb;
+10 	uint8* ocr;
+11 	uint8* p;
+12 	uint32 q;
+13 	uint8* r;
+14 	uint8 sx,sy;
+15 	if (cc%sp->bytes_per_line!=0)
+16 	{
+17 		TIFFErrorExt(tif->tif_clientdata,module,"Fractional scanline not read");
+18 		return(0);
+19 	}
+20 	assert(cc>0);
+21 	m=buf;
+22 	n=cc;
+23 	do
+24 	{
+25 		if (sp->subsampling_convert_state==0)
+26 		{
+27 			if (jpeg_read_raw_data_encap(sp,&(sp->libjpeg_jpeg_decompress_struct),sp->subsampling_convert_ycbcrimage,sp->subsampling_ver*8)==0)
+28 				return(0);
+29 		}
+30 		oy=sp->subsampling_convert_ybuf+sp->subsampling_convert_state*sp->subsampling_ver*sp->subsampling_convert_ylinelen;
+31 		ocb=sp->subsampling_convert_cbbuf+sp->subsampling_convert_state*sp->subsampling_convert_clinelen;
+32 		ocr=sp->subsampling_convert_crbuf+sp->subsampling_convert_state*sp->subsampling_convert_clinelen;
+33 		p=m;
+34 		for (q=0; q<sp->subsampling_convert_clinelenout; q++)
+35 		{
+36 			r=oy;
+37 			for (sy=0; sy<sp->subsampling_ver; sy++)
+38 			{
+39 				for (sx=0; sx<sp->subsampling_hor; sx++)
+40 					*p++=*r++;
+41 				r+=sp->subsampling_convert_ylinelen-sp->subsampling_hor;
+42 			}
+43 			oy+=sp->subsampling_hor;
+44 			*p++=*ocb++;
+45 			*p++=*ocr++;
+46 		}
+47 		sp->subsampling_convert_state++;
+48 		if (sp->subsampling_convert_state==sp->subsampling_convert_clines)
+49 			sp->subsampling_convert_state=0;
+50 		m+=sp->bytes_per_line;
+51 		n-=sp->bytes_per_line;
+52 	} while(n>0);
+53 	return(1);
+54 }
+```
+which has a CWE-190 vulnerability at line:
+```
+15 	if (cc%sp->bytes_per_line!=0)
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

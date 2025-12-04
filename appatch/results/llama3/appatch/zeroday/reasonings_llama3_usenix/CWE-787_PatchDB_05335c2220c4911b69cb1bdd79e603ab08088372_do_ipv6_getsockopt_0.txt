@@ -1,0 +1,37 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+- 1: Validate `len`:
+  - `len` is obtained from various sources, including `ipv6_getsockopt_sticky` function calls and assignments from other variables.
+  - We need to consider what values `len` might take.
+  - If `len` is negative, this could lead to an out-of-bounds access in the `put_user` function.
+
+- 2: `put_user` Function:
+  - The `put_user` function writes a value to a user-space address.
+  - If the value written is negative, it could potentially lead to an out-of-bounds access or other undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `len` is negative, which results in writing an invalid value to the user-space address `optlen`.
+  - This is a classic example of a buffer overflow vulnerability. Writing an invalid value can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the `put_user` function does not ensure that `len` is a valid value. If `len` is negative, the `put_user` function will write an invalid value to the user-space address `optlen`, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `len` is not negative.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to make sure that the value written by `put_user` is valid. This can be done by adding a condition to check if `len` is negative before calling `put_user`. If `len` is negative, the function should return the error immediately without calling `put_user`. Therefore, the patch should be:
+
+```c
+<         release_sock(sk);
+<         return put_user(len, optlen);
+---
+>         release_sock(sk);
+>         if (len < 0)
+>         {
+>             return len;
+>         }
+>         return put_user(len, optlen);
+```
+
+This patch ensures that `put_user` is only called with a valid value, preventing the potential buffer overflow vulnerability.

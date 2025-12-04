@@ -1,0 +1,44 @@
+## Reasoning for the Patch (CWE-401: Memory Leak)
+
+The original code has a memory leak issue in the error handling path. Here's the breakdown:
+
+**Step 1. Resource Allocation and Potential Leak:**
+
+* **Lines 7-8:** Memory is allocated for `ri` using `kzalloc_node`.
+* **Lines 12-13:** Memory is allocated for `root_ops` using `kzalloc_node`.
+* **Line 15:** If the allocation for `root_ops` fails (returns NULL), the function immediately returns `NULL`.
+
+**Step 2. Identifying the Leak:**
+
+* The problem arises because the function returns `NULL` on line 15 **without freeing the memory allocated to `ri`**. 
+* This means if `kzalloc_node` succeeds in allocating memory for `ri` but fails for `root_ops`, the memory pointed to by `ri` will be lost. This memory is no longer accessible, leading to a memory leak.
+
+**Step 3. Patching the Leak:**
+
+* To fix the memory leak, the allocated memory for `ri` needs to be freed **before** returning `NULL` on line 15.
+
+**Step 4. The Patch:**
+
+```diff
+--- a/drivers/pci/controller/pcie-acpi.c
++++ b/drivers/pci/controller/pcie-acpi.c
+@@ -13,6 +13,7 @@
+ 13     root_ops = kzalloc_node(sizeof(*root_ops), GFP_KERNEL, node);
+ 14     if (!root_ops)
+ 15     {
++16         kfree(ri);
+ 17         return NULL;
+ 18     }
+ 19     ri->cfg = pci_acpi_setup_ecam_mapping(root);
+
+```
+
+**Explanation of the Patch:**
+
+* The patch adds `kfree(ri);` on line 16 before returning `NULL`. This ensures that if the allocation for `root_ops` fails, the memory allocated for `ri` is properly freed, preventing the memory leak.
+
+**Additional Notes:**
+
+* This example highlights the importance of carefully handling memory allocation in error paths. 
+* It's crucial to release any resources that are no longer needed before exiting a function, especially in scenarios where an error might occur. 
+* Always review your code for potential resource leaks and implement proper error handling mechanisms. 

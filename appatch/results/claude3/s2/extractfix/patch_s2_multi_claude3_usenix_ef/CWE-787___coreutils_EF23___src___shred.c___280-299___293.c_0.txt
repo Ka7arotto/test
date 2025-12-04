@@ -1,0 +1,82 @@
+Here are five possible code completions for the given function, addressing the CWE-787 (Out-of-bounds Write) vulnerability:
+
+1. Using a for loop with bounds checking:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i;
+  unsigned int bits = type & 0xfff;
+  for (i = 0; i < size && i < sizeof(unsigned int) * 8; i++) {
+    r[i] = (bits & (1U << i)) ? 0xff : 0x00;
+  }
+}
+```
+
+2. Using memset for efficiency and a separate loop for pattern:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i;
+  unsigned int bits = type & 0xfff;
+  memset(r, 0, size);
+  for (i = 0; i < size && i < 12; i++) {
+    if (bits & (1U << i)) {
+      r[i] = 0xff;
+    }
+  }
+}
+```
+
+3. Using a while loop with explicit bounds checking:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i = 0;
+  unsigned int bits = type & 0xfff;
+  while (i < size && bits) {
+    r[i] = (bits & 1) ? 0xff : 0x00;
+    bits >>= 1;
+    i++;
+  }
+}
+```
+
+4. Using a do-while loop with early termination:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i = 0;
+  unsigned int bits = type & 0xfff;
+  if (size > 0) {
+    do {
+      r[i] = (bits & (1U << i)) ? 0xff : 0x00;
+      i++;
+    } while (i < size && i < 12);
+  }
+}
+```
+
+5. Using a combination of memset and bitwise operations:
+
+```c
+static void
+fillpattern (int type, unsigned char *r, size_t size)
+{
+  size_t i;
+  unsigned int bits = type & 0xfff;
+  memset(r, 0, size);
+  for (i = 0; i < size && i < 12; i++) {
+    r[i] |= ((bits >> i) & 1) * 0xff;
+  }
+}
+```
+
+Each of these implementations includes bounds checking to prevent out-of-bounds writes, addressing the CWE-787 vulnerability. They also limit the pattern to 12 bits (0xfff) as specified in the original code.

@@ -1,0 +1,129 @@
+Here are five possible code completions for the given function, addressing the CWE-476 vulnerability:
+
+1. 
+```c
+  if (!cquantize || !input_buf || !output_buf) {
+    return;  // Exit if any required pointer is NULL
+  }
+  
+  for (row = 0; row < num_rows; row++) {
+    input_ptr = input_buf[row];
+    output_ptr = output_buf[row];
+    row_index = cquantize->row_index;
+    for (col = 0; col < cinfo->output_width; col++) {
+      dither = cquantize->dither_matrix[row_index];
+      col_index = col & DITHER_MASK;
+      for (ci = 0; ci < nc; ci++) {
+        colorindex_ci = cquantize->colorindex[ci];
+        *output_ptr++ = colorindex_ci[GETJSAMPLE(*input_ptr++) + dither[col_index]];
+      }
+      row_index = (row_index + 1) & DITHER_MASK;
+    }
+    cquantize->row_index = row_index;
+  }
+}
+```
+
+2.
+```c
+  if (cquantize == NULL || cinfo == NULL) {
+    return;  // Early return if essential pointers are NULL
+  }
+
+  for (row = 0; row < num_rows; row++) {
+    if (row >= cinfo->output_height) break;  // Prevent buffer overflow
+    input_ptr = input_buf[row];
+    output_ptr = output_buf[row];
+    row_index = cquantize->row_index;
+    for (col = 0; col < cinfo->output_width; col++) {
+      dither = cquantize->dither_matrix[row_index];
+      col_index = col & DITHER_MASK;
+      for (ci = 0; ci < nc; ci++) {
+        colorindex_ci = cquantize->colorindex[ci];
+        if (colorindex_ci == NULL) continue;  // Skip if colorindex is NULL
+        *output_ptr++ = colorindex_ci[GETJSAMPLE(*input_ptr++) + dither[col_index]];
+      }
+      row_index = (row_index + 1) & DITHER_MASK;
+    }
+    cquantize->row_index = row_index;
+  }
+}
+```
+
+3.
+```c
+  if (!cquantize || !cinfo || !input_buf || !output_buf) {
+    return;  // Exit if any required pointer is NULL
+  }
+
+  for (row = 0; row < num_rows && row < cinfo->output_height; row++) {
+    input_ptr = input_buf[row];
+    output_ptr = output_buf[row];
+    row_index = cquantize->row_index;
+    for (col = 0; col < cinfo->output_width; col++) {
+      dither = cquantize->dither_matrix[row_index];
+      if (!dither) break;  // Exit loop if dither is NULL
+      col_index = col & DITHER_MASK;
+      for (ci = 0; ci < nc; ci++) {
+        colorindex_ci = cquantize->colorindex[ci];
+        if (!colorindex_ci) continue;  // Skip if colorindex is NULL
+        *output_ptr++ = colorindex_ci[GETJSAMPLE(*input_ptr++) + dither[col_index]];
+      }
+      row_index = (row_index + 1) & DITHER_MASK;
+    }
+    cquantize->row_index = row_index;
+  }
+}
+```
+
+4.
+```c
+  if (cquantize == NULL || cinfo == NULL || input_buf == NULL || output_buf == NULL) {
+    return;  // Early return if any required pointer is NULL
+  }
+
+  for (row = 0; row < num_rows && row < cinfo->output_height; row++) {
+    input_ptr = input_buf[row];
+    output_ptr = output_buf[row];
+    row_index = cquantize->row_index;
+    for (col = 0; col < cinfo->output_width; col++) {
+      if (row_index >= DITHER_MASK + 1) break;  // Prevent out-of-bounds access
+      dither = cquantize->dither_matrix[row_index];
+      col_index = col & DITHER_MASK;
+      for (ci = 0; ci < nc && ci < MAX_COMPONENTS; ci++) {
+        colorindex_ci = cquantize->colorindex[ci];
+        if (colorindex_ci == NULL) continue;  // Skip if colorindex is NULL
+        *output_ptr++ = colorindex_ci[GETJSAMPLE(*input_ptr++) + dither[col_index]];
+      }
+      row_index = (row_index + 1) & DITHER_MASK;
+    }
+    cquantize->row_index = row_index;
+  }
+}
+```
+
+5.
+```c
+  if (!cquantize || !cinfo || !input_buf || !output_buf || num_rows <= 0) {
+    return;  // Exit if any required pointer is NULL or num_rows is invalid
+  }
+
+  for (row = 0; row < num_rows && row < cinfo->output_height; row++) {
+    input_ptr = input_buf[row];
+    output_ptr = output_buf[row];
+    row_index = cquantize->row_index;
+    for (col = 0; col < cinfo->output_width; col++) {
+      if (row_index > DITHER_MASK) row_index = 0;  // Reset row_index if it exceeds DITHER_MASK
+      dither = cquantize->dither_matrix[row_index];
+      col_index = col & DITHER_MASK;
+      for (ci = 0; ci < nc && ci < MAX_COMPONENTS; ci++) {
+        colorindex_ci = cquantize->colorindex[ci];
+        if (!colorindex_ci) break;  // Exit loop if colorindex is NULL
+        *output_ptr++ = colorindex_ci[GETJSAMPLE(*input_ptr++) + dither[col_index]];
+      }
+      row_index = (row_index + 1) & DITHER_MASK;
+    }
+    cquantize->row_index = row_index;
+  }
+}
+```

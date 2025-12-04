@@ -1,0 +1,276 @@
+
+
+
+Q: Given the following code slice:
+```
+1 s32 vvc_parse_picture_header(GF_BitStream *bs, VVCState *vvc, VVCSliceInfo *si)
+3 	u32 pps_id;
+5 	si->irap_or_gdr_pic = gf_bs_read_int_log(bs, 1, "irap_or_gdr_pic");
+6 	si->non_ref_pic = gf_bs_read_int_log(bs, 1, "non_ref_pic");
+7 	if (si->irap_or_gdr_pic)
+8 		si->gdr_pic = gf_bs_read_int_log(bs, 1, "gdr_pic");
+9 	if ((si->inter_slice_allowed_flag = gf_bs_read_int_log(bs, 1, "inter_slice_allowed_flag")))
+10 		si->intra_slice_allowed_flag = gf_bs_read_int_log(bs, 1, "intra_slice_allowed_flag");
+12 	pps_id = gf_bs_read_ue_log(bs, "pps_id");
+13 	if (pps_id >= 64)
+15 	si->pps = &vvc->pps[pps_id];```
+which has a CWE-125 vulnerability at line:
+```
+15 	si->pps = &vvc->pps[pps_id];
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (out-of-bounds read) vulnerability exists in the code because the index `pps_id` may be out of bounds of the array `vvc->pps`. When this happens, the array access will exceed the boundary, causing an out-of-bounds read vulnerability, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the index `pps_id` is within the bounds of the array `vvc->pps`. This can be done by adding a condition to check if `pps_id` is within the valid range. However, in this case, the patch is not correctly fixing the issue. The correct patch should be:
+```
+< 	if (pps_id >= 64)
+---
+> 	if (pps_id < 0 || pps_id >= 64)
+```
+The added condition `pps_id < 0` is to prevent negative indices, which would also cause an out-of-bounds access.
+
+
+Q: Given the following code slice:
+```
+1 static int serdes_probe(struct platform_device *pdev)
+4 	struct serdes_ctrl *ctrl;
+5 	unsigned int i;
+6 	int ret;
+8 	ctrl = devm_kzalloc(&pdev->dev, sizeof(*ctrl), GFP_KERNEL);
+9 	if (!ctrl)
+12 	ctrl->dev = &pdev->dev;
+13 	ctrl->regs = syscon_node_to_regmap(pdev->dev.parent->of_node);
+14 	if (IS_ERR(ctrl->regs))
+17 	for (i = 0; i <= SERDES_MAX; i++) {
+18 		ret = serdes_phy_create(ctrl, i, &ctrl->phys[i]);
+19 		if (ret)```
+which has a CWE-125 vulnerability at line:
+```
+18 		ret = serdes_phy_create(ctrl, i, &ctrl->phys[i]);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (Out-of-bounds Read) vulnerability exists in the code because the loop counter `i` can reach the value of `SERDES_MAX` in the loop condition `i <= SERDES_MAX`. When `i` equals `SERDES_MAX`, the array `ctrl->phys` will be accessed out of its bounds, causing an out-of-bounds read vulnerability, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the loop counter `i` cannot reach the value of `SERDES_MAX`. This can be done by changing the loop condition to `i < SERDES_MAX`. Therefore the patch should be:
+```
+< 	for (i = 0; i <= SERDES_MAX; i++) {
+---
+> 	for (i = 0; i < SERDES_MAX; i++) {
+```
+This patch ensures that the array `ctrl->phys` is not accessed out of its bounds, thus fixing the CWE-125 vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static int drxj_dap_atomic_read_reg32(struct i2c_device_addr *dev_addr, u32 addr, u32 *data, u32 flags)
+3     u8 buf[sizeof(*data)];
+6     if (!data)
+11     word = (u32)buf[3];```
+which has a CWE-125 vulnerability at line:
+```
+11     word = (u32)buf[3];
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (Out-of-bounds Read) vulnerability exists in the code because the buffer `buf` is not checked for its size before accessing its 4th element (`buf[3]`). If the size of `buf` is less than 4, accessing `buf[3]` will result in an out-of-bounds read, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to ensure that the buffer `buf` has a sufficient size before accessing its elements. In this case, the function `drxj_dap_atomic_read_write_block` is called, which presumably fills the buffer `buf`. However, the return code `rc` is not checked. If the function call fails, the buffer `buf` may not be properly initialized, leading to an out-of-bounds read. Therefore, the patch should check the return code `rc` before accessing the buffer `buf`. The corrected code is:
+```
+<     rc = drxj_dap_atomic_read_write_block(dev_addr, addr, sizeof(*data), buf, true);
+<     word = (u32)buf[3];
+---
+>     rc = drxj_dap_atomic_read_write_block(dev_addr, addr, sizeof(*data), buf, true);
+>     if (rc < 0)
+>     {
+>         return 0;
+>     }
+>     word = (u32)buf[3];
+```
+This patch ensures that the buffer `buf` is properly initialized before accessing its elements, thus preventing the out-of-bounds read vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static s32 gf_hevc_read_vps_bs_internal(GF_BitStream *bs, HEVCState *hevc, Bool stop_at_vps_ext)
+5 	s32 vps_id;
+6 	HEVC_VPS *vps;
+10 	vps_id = gf_bs_read_int_log(bs, 4, "vps_id");
+12 	if (vps_id >= 16) return -1;
+14 	vps = &hevc->vps[vps_id];```
+which has a CWE-125 vulnerability at line:
+```
+14 	vps = &hevc->vps[vps_id];
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (Out-of-bounds read) vulnerability exists in the code because the index `vps_id` may be out of bounds when accessing the array `hevc->vps`. This happens when `vps_id` is less than 0 or greater than or equal to 16. When this happens, the array access will be out of bounds, causing an out-of-bounds read vulnerability, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the index `vps_id` is within the bounds of the array `hevc->vps`. This can be done by adding a condition in the if statement to check for both lower and upper bounds of `vps_id`. Therefore the patch should be:
+```
+< 	if (vps_id >= 16) return -1;
+---
+> 	if ((vps_id<0) || (vps_id >= 16)) return -1;
+```
+This patch ensures that `vps_id` is within the valid range before accessing the array `hevc->vps`, thus preventing the out-of-bounds read vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static int wm8994_get_drc_enum(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
+3     struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+4     struct wm8994_priv *wm8994 = snd_soc_codec_get_drvdata(codec);
+5     int drc = wm8994_get_drc(kcontrol->id.name);
+6     ucontrol->value.enumerated.item[0] = wm8994->drc_cfg[drc];```
+which has a CWE-125 vulnerability at line:
+```
+6     ucontrol->value.enumerated.item[0] = wm8994->drc_cfg[drc];
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (Out-of-bounds Read) vulnerability exists in the code because the index `drc` may be out of bounds when accessing `wm8994->drc_cfg[drc]`. This can happen if `wm8994_get_drc(kcontrol->id.name)` returns a value that is not a valid index for `wm8994->drc_cfg`.
+
+Step 2. Fixing Strategy. A common fixing strategy is to validate the index `drc` before using it to access `wm8994->drc_cfg`. This can be done by checking if `drc` is within the valid range. If `drc` is invalid, the function should return an error. Therefore, the patch should be:
+```
+<     int drc = wm8994_get_drc(kcontrol->id.name);
+<     ucontrol->value.enumerated.item[0] = wm8994->drc_cfg[drc];
+---
+>     int drc = wm8994_get_drc(kcontrol->id.name);
+>     if (drc < 0)
+>     {
+>         return drc;
+>     }
+>     ucontrol->value.enumerated.item[0] = wm8994->drc_cfg[drc];
+```
+This patch ensures that `drc` is validated before using it to access `wm8994->drc_cfg`, preventing the out-of-bounds read vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 static int crypto_report_akcipher(struct sk_buff *skb, struct crypto_alg *alg)
+3 	struct crypto_report_akcipher rakcipher;
+5 	strlcpy(rakcipher.type, "akcipher", sizeof(rakcipher.type));```
+which has a CWE-125 vulnerability at line:
+```
+5 	strlcpy(rakcipher.type, "akcipher", sizeof(rakcipher.type));
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (out-of-bound read) vulnerability exists in the code because the `strlcpy` function does not guarantee null termination when the destination buffer is not large enough. This can lead to an out-of-bounds read when the copied string is later used as a null-terminated string.
+
+Step 2. Fixing Strategy. A common fixing strategy is to use a function that guarantees null termination, such as `strncpy`. This function will pad the remaining bytes with null characters if the source string is shorter than the specified length. Therefore, the patch should be:
+```
+< 	strlcpy(rakcipher.type, "akcipher", sizeof(rakcipher.type));
+---
+> 	strncpy(rakcipher.type, "akcipher", sizeof(rakcipher.type));
+```
+
+
+Q: Given the following code slice:
+```
+1 decrypt_response(struct sc_card *card, unsigned char *in, size_t inlen, unsigned char *out, size_t * out_len)
+3 	size_t cipher_len;
+4 	size_t i;
+6 	unsigned char plaintext[4096] = { 0 };
+9 	if (!card->drv_data) 
+15 	if (in[0] == 0x99)
+19 	if (0x01 == in[2] && 0x82 != in[1]) {
+20 		cipher_len = in[1];
+21 		i = 3;
+23 	else if (0x01 == in[3] && 0x81 == in[1]) {
+24 		cipher_len = in[2];
+25 		i = 4;
+27 	else if (0x01 == in[4] && 0x82 == in[1]) {
+28 		cipher_len = in[2] * 0x100;
+29 		cipher_len += in[3];
+30 		i = 5;
+36 	if (cipher_len < 2 || i+cipher_len > inlen || cipher_len > sizeof plaintext)
+46 	while (0x80 != plaintext[cipher_len - 2] && (cipher_len - 2 > 0))
+47 		cipher_len--;
+49 	if (2 == cipher_len)
+53 	*out_len = cipher_len - 2;```
+which has a CWE-125 vulnerability at line:
+```
+53 	*out_len = cipher_len - 2;
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (out-of-bounds read) vulnerability exists in the code because the value of `cipher_len` is not checked before being used to calculate the value assigned to `*out_len`. If `cipher_len` is less than 2, the subtraction `cipher_len - 2` will result in an underflow, causing an out-of-bounds read vulnerability, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to ensure that the value of `cipher_len` is valid before using it for calculation. This can be done by adding a condition to check if `cipher_len` is at least 2 before performing the subtraction. Therefore, the patch should be:
+```
+< 	if (2 == cipher_len)
+---
+> 	if (2 == cipher_len || *out_len < cipher_len - 2)
+```
+This patch ensures that the subtraction `cipher_len - 2` will not result in an underflow, thus preventing the CWE-125 vulnerability.
+
+
+Q: Given the following code slice:
+```
+1 s32 vvc_parse_picture_header(GF_BitStream *bs, VVCState *vvc, VVCSliceInfo *si)
+3 	u32 pps_id;
+5 	si->irap_or_gdr_pic = gf_bs_read_int_log(bs, 1, "irap_or_gdr_pic");
+6 	si->non_ref_pic = gf_bs_read_int_log(bs, 1, "non_ref_pic");
+7 	if (si->irap_or_gdr_pic)
+8 		si->gdr_pic = gf_bs_read_int_log(bs, 1, "gdr_pic");
+9 	if ((si->inter_slice_allowed_flag = gf_bs_read_int_log(bs, 1, "inter_slice_allowed_flag")))
+10 		si->intra_slice_allowed_flag = gf_bs_read_int_log(bs, 1, "intra_slice_allowed_flag");
+12 	pps_id = gf_bs_read_ue_log(bs, "pps_id");
+13 	if (pps_id >= 64)
+15 	si->pps = &vvc->pps[pps_id];```
+which has a CWE-125 vulnerability at line:
+```
+15 	si->pps = &vvc->pps[pps_id];
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (out-of-bounds read) vulnerability exists in the code because the index `pps_id` may be out of bounds of the array `vvc->pps`. When this happens, the array access will exceed the boundary, causing an out-of-bounds read vulnerability, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the index `pps_id` is within the bounds of the array `vvc->pps`. This can be done by adding a condition to check if `pps_id` is within the valid range. However, in this case, the patch is not correctly fixing the issue. The correct patch should be:
+```
+< 	if (pps_id >= 64)
+---
+> 	if (pps_id < 0 || pps_id >= 64)
+```
+The added condition `pps_id < 0` is to prevent negative indices, which would also cause an out-of-bounds access.
+
+
+Q: Given the following code slice:
+```
+1 static s32 gf_hevc_read_pps_bs_internal(GF_BitStream *bs, HEVCState *hevc)
+4 	s32 pps_id;
+5 	HEVC_PPS *pps;
+8 	pps_id = gf_bs_read_ue_log(bs, "pps_id");
+10 	if ((pps_id < 0) || (pps_id >= 64)) {
+14 	pps = &hevc->pps[pps_id];
+16 	if (!pps->state) {
+17 		pps->id = pps_id;
+18 		pps->state = 1;
+20 	pps->sps_id = gf_bs_read_ue_log(bs, "sps_id");
+21 	if (pps->sps_id >= 16) {```
+which has a CWE-125 vulnerability at line:
+```
+21 	if (pps->sps_id >= 16) {
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: Looking at the given vulnerable code line and its context, the CWE-125 (out-of-bounds read) vulnerability exists in the code because the variable `pps->sps_id` may be less than 0 if the function `gf_bs_read_ue_log(bs, "sps_id")` returns a negative value. When this happens, the array access `hevc->pps[pps_id]` will underflow the boundary, causing an out-of-bounds read vulnerability, which is CWE-125.
+
+Step 2. Fixing Strategy. A common fixing strategy is to make sure that the index `pps->sps_id` cannot be less than 0. This can be done by adding a condition in the if statement to avoid `pps->sps_id` smaller than 0. Therefore the patch should be:
+```
+< 	if (pps->sps_id >= 16) {
+---
+> 	if ((pps->sps_id<0) || (pps->sps_id >= 16)) {
+```
+This patch ensures that the index `pps->sps_id` is within the valid range, preventing the out-of-bounds read vulnerability.

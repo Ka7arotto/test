@@ -1,0 +1,36 @@
+The patching can be done in two steps.
+
+### Step 1. Root Cause Analysis: 
+
+Starting with input, reason about the vulnerable behavior until the vulnerability is determined:
+
+- 1: Validate `pktmp`:
+  - `pktmp` is obtained from `X509_get_pubkey(x)`. We need to consider what values `pktmp` might take.
+  - If `pktmp` is `NULL`, this could lead to a null pointer dereference in the `X509_REQ_set_pubkey` function.
+
+- 2: Function Call:
+  - The `X509_REQ_set_pubkey` function is called with `pktmp` as an argument.
+  - If `pktmp` is `NULL`, this function call will likely result in a null pointer dereference, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `pktmp` is `NULL`, which results in a null pointer dereference in the `X509_REQ_set_pubkey` function.
+  - This is a classic example of a null pointer dereference vulnerability. Dereferencing a null pointer can lead to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a null pointer dereference. It occurs because the code does not check if `pktmp` is `NULL` before passing it to the `X509_REQ_set_pubkey` function. If `pktmp` is `NULL`, the function call will result in a null pointer dereference, leading to potential crashes or security vulnerabilities. Proper null pointer checks should be added to ensure `pktmp` is not `NULL` before using it.
+
+### Step 2. Fixing Strategy. 
+
+A common fixing strategy is to add a null pointer check before using `pktmp`. This can be done by adding a conditional statement to check if `pktmp` is `NULL` and handle the error accordingly. Therefore, the patch should be:
+```
+<     pktmp = X509_get_pubkey(x);
+<     i = X509_REQ_set_pubkey(ret, pktmp);
+---
+>     pktmp = X509_get_pubkey(x);
+>     if (pktmp == NULL)
+>     {
+>         err
+>     }
+>     i = X509_REQ_set_pubkey(ret, pktmp);
+```
+This patch adds a null pointer check before calling `X509_REQ_set_pubkey`, ensuring that `pktmp` is not `NULL` before using it. If `pktmp` is `NULL`, an error is reported, preventing the null pointer dereference vulnerability.

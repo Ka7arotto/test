@@ -1,0 +1,204 @@
+Here are five possible code completions for the given function, addressing the CWE-787 vulnerability (Out-of-bounds Write) and following good coding practices:
+
+1. Completion with bounds checking:
+
+```c
+static void
+bytes_chunk_extract (uintmax_t k, uintmax_t n, char *buf, size_t bufsize,
+                     size_t initial_read, off_t file_size)
+{
+  off_t start;
+  off_t end;
+  /* fixed CWE-787 vulnerability*/
+  
+  if (k > n || n == 0 || buf == NULL || bufsize == 0)
+    return;
+
+  start = (k - 1) * (file_size / n);
+  end = k * (file_size / n);
+
+  if (end > file_size)
+    end = file_size;
+
+  size_t chunk_size = end - start;
+  if (chunk_size > bufsize)
+    chunk_size = bufsize;
+
+  if (lseek(STDIN_FILENO, start, SEEK_SET) == -1)
+    return;
+
+  ssize_t bytes_read = read(STDIN_FILENO, buf, chunk_size);
+  if (bytes_read > 0 && bytes_read < (ssize_t)bufsize)
+    buf[bytes_read] = '\0';
+}
+```
+
+2. Completion with error handling:
+
+```c
+static void
+bytes_chunk_extract (uintmax_t k, uintmax_t n, char *buf, size_t bufsize,
+                     size_t initial_read, off_t file_size)
+{
+  off_t start;
+  off_t end;
+  /* fixed CWE-787 vulnerability*/
+  
+  if (k > n || n == 0 || buf == NULL || bufsize == 0)
+  {
+    fprintf(stderr, "Invalid input parameters\n");
+    return;
+  }
+
+  start = (k - 1) * (file_size / n);
+  end = k * (file_size / n);
+
+  if (end > file_size)
+    end = file_size;
+
+  size_t chunk_size = end - start;
+  if (chunk_size > bufsize - 1)
+    chunk_size = bufsize - 1;
+
+  if (lseek(STDIN_FILENO, start, SEEK_SET) == -1)
+  {
+    perror("lseek failed");
+    return;
+  }
+
+  ssize_t bytes_read = read(STDIN_FILENO, buf, chunk_size);
+  if (bytes_read == -1)
+  {
+    perror("read failed");
+    return;
+  }
+
+  buf[bytes_read] = '\0';
+}
+```
+
+3. Completion with dynamic memory allocation:
+
+```c
+static void
+bytes_chunk_extract (uintmax_t k, uintmax_t n, char *buf, size_t bufsize,
+                     size_t initial_read, off_t file_size)
+{
+  off_t start;
+  off_t end;
+  /* fixed CWE-787 vulnerability*/
+  
+  if (k > n || n == 0 || buf == NULL || bufsize == 0)
+    return;
+
+  start = (k - 1) * (file_size / n);
+  end = k * (file_size / n);
+
+  if (end > file_size)
+    end = file_size;
+
+  size_t chunk_size = end - start;
+  char *temp_buf = malloc(chunk_size + 1);
+  if (temp_buf == NULL)
+    return;
+
+  if (lseek(STDIN_FILENO, start, SEEK_SET) == -1)
+  {
+    free(temp_buf);
+    return;
+  }
+
+  ssize_t bytes_read = read(STDIN_FILENO, temp_buf, chunk_size);
+  if (bytes_read > 0)
+  {
+    temp_buf[bytes_read] = '\0';
+    strncpy(buf, temp_buf, bufsize - 1);
+    buf[bufsize - 1] = '\0';
+  }
+
+  free(temp_buf);
+}
+```
+
+4. Completion with input validation and error codes:
+
+```c
+static int
+bytes_chunk_extract (uintmax_t k, uintmax_t n, char *buf, size_t bufsize,
+                     size_t initial_read, off_t file_size)
+{
+  off_t start;
+  off_t end;
+  /* fixed CWE-787 vulnerability*/
+  
+  if (k > n || n == 0 || buf == NULL || bufsize == 0)
+    return -1;
+
+  if (file_size <= 0 || initial_read > (size_t)file_size)
+    return -2;
+
+  start = (k - 1) * (file_size / n);
+  end = k * (file_size / n);
+
+  if (end > file_size)
+    end = file_size;
+
+  size_t chunk_size = end - start;
+  if (chunk_size > bufsize - 1)
+    chunk_size = bufsize - 1;
+
+  if (lseek(STDIN_FILENO, start, SEEK_SET) == -1)
+    return -3;
+
+  ssize_t bytes_read = read(STDIN_FILENO, buf, chunk_size);
+  if (bytes_read == -1)
+    return -4;
+
+  buf[bytes_read] = '\0';
+  return 0;
+}
+```
+
+5. Completion with a struct for parameters:
+
+```c
+struct chunk_params {
+  uintmax_t k;
+  uintmax_t n;
+  char *buf;
+  size_t bufsize;
+  size_t initial_read;
+  off_t file_size;
+};
+
+static void
+bytes_chunk_extract (struct chunk_params *params)
+{
+  off_t start;
+  off_t end;
+  /* fixed CWE-787 vulnerability*/
+  
+  if (params == NULL || params->k > params->n || params->n == 0 ||
+      params->buf == NULL || params->bufsize == 0)
+    return;
+
+  start = (params->k - 1) * (params->file_size / params->n);
+  end = params->k * (params->file_size / params->n);
+
+  if (end > params->file_size)
+    end = params->file_size;
+
+  size_t chunk_size = end - start;
+  if (chunk_size > params->bufsize - 1)
+    chunk_size = params->bufsize - 1;
+
+  if (lseek(STDIN_FILENO, start, SEEK_SET) == -1)
+    return;
+
+  ssize_t bytes_read = read(STDIN_FILENO, params->buf, chunk_size);
+  if (bytes_read > 0)
+    params->buf[bytes_read] = '\0';
+}
+```
+
+These completions address the CWE-787 vulnerability by ensuring proper bounds checking, error handling, and buffer size management. They also demonstrate different approaches to parameter handling and function design.

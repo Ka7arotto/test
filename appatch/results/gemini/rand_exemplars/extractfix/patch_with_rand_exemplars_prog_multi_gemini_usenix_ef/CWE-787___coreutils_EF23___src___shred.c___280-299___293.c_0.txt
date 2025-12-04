@@ -1,0 +1,120 @@
+Step 1: 
+- 1: Input Variable `size`:
+  - `size` is the input variable that determines the size of the memory region pointed to by `r`. It represents the number of bytes allocated.
+
+- 2: Loop Initialization:
+  - The loop starts with `i = 3`. This means the first memory copy starts at `r + 3`.
+
+- 3: Loop Condition:
+  - The loop continues as long as `i < size / 2`. This condition is meant to ensure that `i` stays within the bounds of the allocated memory. However, it doesn't guarantee that `i` will never exceed the bounds.
+
+- 4: Loop Increment:
+  - The loop increment `i *= 2` doubles the value of `i` in each iteration. This means `i` grows rapidly.
+
+- 5: Vulnerability:
+  - The vulnerability arises in the `memcpy` call: `memcpy (r + i, r, i);`
+    - `r + i` points to the destination address in memory.
+    - `r` points to the source address.
+    - `i` determines the number of bytes to copy.
+  - If `i` grows beyond `size / 2` (i.e., `i >= size / 2`), then `r + i` would point to a location beyond the allocated memory region.
+  - The `memcpy` operation would then attempt to write data outside the boundaries of the allocated memory, leading to a buffer overflow.
+
+- 6: Potential Impact:
+  - This out-of-bounds write can corrupt adjacent memory locations, potentially leading to crashes, program malfunctions, or even security exploits if the corrupted memory is used by other parts of the program.
+
+### Conclusion:
+The vulnerability in the code arises from the uncontrolled growth of the loop variable `i` within the `memcpy` call. If `i` doubles beyond `size / 2`, it leads to an out-of-bounds write, potentially causing memory corruption and unexpected program behavior. This situation requires a check to ensure that `i` never exceeds `size / 2` before the `memcpy` call to prevent the buffer overflow vulnerability. 
+
+## Five Possible Patches for CWE-787 in `fillpattern`
+
+Here are five different approaches to patching the CWE-787 vulnerability in the `fillpattern` function, along with explanations:
+
+**Patch 1: Explicit Bounds Check**
+
+```c
+static void
+fillpattern(int type, unsigned char *r, size_t size)
+{
+    size_t i;
+
+    for (i = 3; i < size / 2; i *= 2) {
+        if (i >= size / 2) { // Add bounds check
+            break; // Exit loop if i exceeds the limit
+        }
+        memcpy(r + i, r, i);
+    }
+}
+```
+
+* **Explanation:** This patch introduces an explicit `if` statement within the loop to check if `i` has reached or exceeded the safe limit (`size / 2`).  If it has, the loop is terminated, preventing the out-of-bounds write.
+
+**Patch 2: Loop Condition Modification**
+
+```c
+static void
+fillpattern(int type, unsigned char *r, size_t size)
+{
+    size_t i;
+
+    for (i = 3; i < size / 4; i *= 2) { // Modify loop condition
+        memcpy(r + i, r, i);
+    }
+}
+```
+
+* **Explanation:** This patch modifies the loop condition to `i < size / 4`. By dividing the limit by 2, the loop ensures that `i` never exceeds `size / 2`, preventing the out-of-bounds write. This approach simplifies the code by removing the need for an explicit check.
+
+**Patch 3: Using `memcpy` with Safe Offset**
+
+```c
+static void
+fillpattern(int type, unsigned char *r, size_t size)
+{
+    size_t i;
+
+    for (i = 3; i < size / 2; i *= 2) {
+        memcpy(r + i, r, size / 2 - i); // Limit copy size
+    }
+}
+```
+
+* **Explanation:**  This patch modifies the `memcpy` call to use a safe offset (`size / 2 - i`) for the copy size. This ensures that the copy operation always stays within the allocated memory region, regardless of the value of `i`.
+
+**Patch 4: Using `strncpy`**
+
+```c
+static void
+fillpattern(int type, unsigned char *r, size_t size)
+{
+    size_t i;
+
+    for (i = 3; i < size / 2; i *= 2) {
+        strncpy(r + i, r, i); // Use strncpy for safe copy
+    }
+}
+```
+
+* **Explanation:** This patch replaces `memcpy` with `strncpy`. The `strncpy` function automatically stops copying when it reaches the specified length or the null terminator. This ensures that the copy operation never goes beyond the allocated memory.
+
+**Patch 5: Rewriting the Loop**
+
+```c
+static void
+fillpattern(int type, unsigned char *r, size_t size)
+{
+    size_t i;
+
+    for (i = 3; i < size / 2; i += 3) { // Change loop increment
+        memcpy(r + i, r, i);
+    }
+}
+```
+
+* **Explanation:** This patch modifies the loop increment from `i *= 2` to `i += 3`. This ensures that `i` grows more slowly and reduces the risk of `i` exceeding `size / 2`. However, it's important to ensure that the new increment pattern still achieves the intended behavior.
+
+**Important Considerations**
+
+* **Choosing the Best Patch:** The most appropriate patch depends on the specific requirements and the overall code structure. 
+* **Testing:**  Thoroughly test each patch to ensure that it fixes the vulnerability and does not introduce new issues. 
+* **Code Review:**  Perform a code review to ensure the patch is implemented correctly and efficiently. 
+* **Documentation:** Update the documentation to reflect the change and any potential implications. 

@@ -1,0 +1,101 @@
+Q: Given the following code slice:
+```
+given the following code: 
+1 void cycle0(struct st *hello){
+5    int num = hello->getOfferNum();
+6    int offered[max_offered + 1];
+7    for (int i = 0; i < num; i++) {
+8        offered[i] = hello->getOffer(i);} 
+```
+which has CWE-787 (Out-of-bound write) vulnerability at line:
+```
+offered[i] = hello->getOffer(i);}
+```
+Starting with input variable hello, reason about the vulnerable behavior step by step until the vulnerability is determined.
+A: 
+- 1: Validate `num`:
+  - `num` is obtained from `hello->getOfferNum()`. We need to consider what values `num` might take.
+  - If `num` is greater than `max_offered + 1`, this could lead to an out-of-bounds access in the `offered` array.
+
+- 2: Array Size and Indexing:
+  - The size of the `offered` array is fixed at `max_offered + 1`.
+  - The loop iterates `num` times. If `num` is greater than `max_offered + 1`, then `offered[i]` will access indices beyond the bounds of the array, leading to undefined behavior.
+
+- 3: Potential Vulnerability:
+  - The vulnerability arises if `num` exceeds `max_offered + 1`, which results in writing past the end of the `offered` array.
+  - This is a classic example of a buffer overflow vulnerability. Writing outside the bounds of the allocated array can corrupt adjacent memory, potentially leading to crashes or exploitable conditions.
+
+### Conclusion:
+The vulnerable behavior in this code is a buffer overflow. It occurs because the loop does not ensure that `num` is within the bounds of the allocated array size `max_offered + 1`. If `num` is greater than `max_offered + 1`, the loop will write past the end of the `offered` array, leading to potential memory corruption and security vulnerabilities. Proper bounds checking should be added to ensure `num` does not exceed `max_offered + 1`.
+
+
+Q: Given the following code slice:
+```
+1 void
+2 PSDataColorContig(FILE* fd, TIFF* tif, uint32 w, uint32 h, int nc)
+3 {
+4 	uint32 row;
+5 	int breaklen = MAXLINE;
+6 	int es = samplesperpixel - nc;
+7 	tsize_t cc;
+8 	unsigned char *tf_buf;
+9 	unsigned char *cp, c;
+10 	(void) w;
+11 	tf_buf = (unsigned char *) _TIFFmalloc(tf_bytesperrow);
+12 	if (tf_buf == NULL) {
+13 		TIFFError(filename, "No space for scanline buffer");
+14 		return;
+15 	}
+16 	for (row = 0; row < h; row++) {
+17 		if (TIFFReadScanline(tif, tf_buf, row, 0) < 0)
+18 			break;
+19 		cp = tf_buf;
+20 		/*
+21 		 * for 16 bits, the two bytes must be most significant
+22 		 * byte first
+23 		 */
+24 		if (bitspersample == 16 && !HOST_BIGENDIAN) {
+25 			PS_FlipBytes(cp, tf_bytesperrow);
+26 		}
+27 		if (alpha) {
+28 			int adjust;
+29 			cc = 0;
+30 			for (; cc < tf_bytesperrow; cc += samplesperpixel) {
+31 				DOBREAK(breaklen, nc, fd);
+32 				/*
+33 				 * For images with alpha, matte against
+34 				 * a white background; i.e.
+35 				 *    Cback * (1 - Aimage)
+36 				 * where Cback = 1.
+37 				 */
+38 				adjust = 255 - cp[nc];
+39 				switch (nc) {
+40 				case 4: c = *cp++ + adjust; PUTHEX(c,fd);
+41 				case 3: c = *cp++ + adjust; PUTHEX(c,fd);
+42 				case 2: c = *cp++ + adjust; PUTHEX(c,fd);
+43 				case 1: c = *cp++ + adjust; PUTHEX(c,fd);
+44 				}
+45 				cp += es;
+46 			}
+47 		} else {
+48 			cc = 0;
+49 			for (; cc < tf_bytesperrow; cc += samplesperpixel) {
+50 				DOBREAK(breaklen, nc, fd);
+51 				switch (nc) {
+52 				case 4: c = *cp++; PUTHEX(c,fd);
+53 				case 3: c = *cp++; PUTHEX(c,fd);
+54 				case 2: c = *cp++; PUTHEX(c,fd);
+55 				case 1: c = *cp++; PUTHEX(c,fd);
+56 				}
+57 				cp += es;
+58 			}
+59 		}
+60 	}
+61 	_TIFFfree((char *) tf_buf);
+62 }
+```
+which has a CWE-787 vulnerability at line:
+```
+57 				cp += es;
+```
+Starting with input, reason about the vulnerable behavior step by step until the vulnerability is determined.

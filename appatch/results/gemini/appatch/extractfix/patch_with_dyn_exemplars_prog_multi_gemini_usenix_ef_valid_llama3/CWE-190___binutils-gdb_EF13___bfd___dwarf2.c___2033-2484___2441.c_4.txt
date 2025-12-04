@@ -1,0 +1,36 @@
+c
+224       bfd_vma address = 0;
+225       unsigned char op_index = 0;
+226       char * filename = table->num_files ? concat_filename (table, 1) : NULL;
+227       unsigned int line = 1;
+228       unsigned int column = 0;
+229       unsigned int discriminator = 0;
+231       int end_sequence = 0;
+232       
+233       // Calculate maximum possible value of op_index + adj_opcode / lh.line_range
+234       // based on input data and loop iterations
+235       uintmax_t max_op_index = // Calculate based on loop structure and input data
+236       uintmax_t max_adj_opcode = // Calculate based on input data
+237       bfd_vma low_pc  = (bfd_vma) -1;
+238       bfd_vma high_pc = 0;
+239
+240       while (! end_sequence) {
+241 	  op_code = read_1_byte (abfd, line_ptr, line_end);
+242 	  line_ptr += 1;
+243 	  
+244 	  if (op_code >= lh.opcode_base) {
+245 	      adj_opcode = op_code - lh.opcode_base;
+246 	      // Validate against calculated limits
+247 	      if (op_index > max_op_index || adj_opcode > max_adj_opcode) {
+248 		  // Handle invalid input, e.g., return an error or log the issue
+249 		  return NULL;
+250 	      }
+251 	      if (lh.maximum_ops_per_insn == 1) {
+252 		  address += (adj_opcode / lh.line_range);
+253 		  op_index = 0; // Reset op_index after each instruction
+254 	      } else {
+255 		  op_index++;
+256 		  if (op_index >= lh.maximum_ops_per_insn) {
+257 		    op_index = 0;
+258 		  }
+259 		  address += ((op_index + adj_opcode / lh.line_range)

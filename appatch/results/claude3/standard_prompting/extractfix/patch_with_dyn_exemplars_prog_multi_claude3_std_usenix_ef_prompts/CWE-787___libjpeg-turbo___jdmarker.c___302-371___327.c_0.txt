@@ -1,0 +1,350 @@
+
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+By applying this patch, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+By applying this patch, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+By applying this patch, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_private_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	const sc_acl_entry_t *e;
+69 	u8 buf[2048], *p = buf;
+70 	size_t bufsize, keysize;
+72 	r = select_app_df();
+73 	if (r)
+76 	r = sc_select_file(card, &path, &file);
+77 	if (r) {
+81 	e = sc_file_get_acl_entry(file, SC_AC_OP_READ);
+82 	if (e == NULL || e->method == SC_AC_NEVER)
+84 	bufsize = file->size;
+86 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps:
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+This way, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_private_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	const sc_acl_entry_t *e;
+69 	u8 buf[2048], *p = buf;
+70 	size_t bufsize, keysize;
+72 	r = select_app_df();
+73 	if (r)
+76 	r = sc_select_file(card, &path, &file);
+77 	if (r) {
+81 	e = sc_file_get_acl_entry(file, SC_AC_OP_READ);
+82 	if (e == NULL || e->method == SC_AC_NEVER)
+84 	bufsize = file->size;
+86 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps:
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+This way, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+By applying this patch, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+By applying this patch, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+62 static int read_public_key(RSA *rsa)
+64 	int r;
+66 	sc_file_t *file;
+67 	u8 buf[2048], *p = buf;
+68 	size_t bufsize, keysize;
+70 	r = select_app_df();
+71 	if (r)
+74 	r = sc_select_file(card, &path, &file);
+75 	if (r) {
+79 	bufsize = file->size;
+81 	r = sc_read_binary(card, 0, buf, bufsize, 0);
+1 int sc_read_binary(sc_card_t *card, unsigned int idx,
+2 		   unsigned char *buf, size_t count, unsigned long *flags)
+6 	int r;
+8 	if (card == NULL || card->ops == NULL || buf == NULL) {
+17 	if (card->sm_ctx.ops.read_binary)   {
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);```
+which has a CWE-787 vulnerability at line:
+```
+18 		r = card->sm_ctx.ops.read_binary(card, idx, buf, count);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `bufsize` is assigned directly from `file->size` without any bounds checking. If `file->size` is larger than the size of the buffer `buf` (2048 bytes), the call to `sc_read_binary` at line 18 will write beyond the bounds of `buf`, causing a buffer overflow.
+
+Step 2. Fixing Strategy: To prevent the buffer overflow, the value of `bufsize` should be limited to the size of the buffer `buf`. This can be achieved by taking the minimum of `file->size` and `sizeof buf`. Therefore, the patch should be:
+
+```
+<    bufsize = file->size;
+---
+>    bufsize = MIN(file->size, sizeof buf);
+```
+
+By applying this patch, `bufsize` will be set to the smaller value between `file->size` and `sizeof buf`, ensuring that the call to `sc_read_binary` will not write beyond the bounds of the buffer `buf`.
+
+
+Q: Given the following code slice:
+```
+1 static void mousevsc_on_receive_device_info(struct mousevsc_dev *input_device, struct synthhid_device_info *device_info)
+4     struct hid_descriptor *desc;
+6     input_device->dev_info_status = 0;
+7     memcpy(&input_device->hid_dev_info, &device_info->hid_dev_info, sizeof(hv_input_dev_info));
+8     desc = &device_info->hid_descriptor;
+10     input_device->hid_desc = kzalloc(desc->bLength, GFP_ATOMIC);
+16     memcpy(input_device->hid_desc, desc, desc->bLength);
+17     input_device->report_desc_size = desc->desc[0].wDescriptorLength;
+18     input_device->report_desc = kzalloc(input_device->report_desc_size, GFP_ATOMIC);```
+which has a CWE-787 vulnerability at line:
+```
+18     input_device->report_desc = kzalloc(input_device->report_desc_size, GFP_ATOMIC);
+```
+Please generate the patch for the vulnerability. Please follow the patch format in the exemplars.
+The patching can be done in two steps.
+
+Step 1. Root Cause Analysis: The vulnerability CWE-787 (Out-of-bounds Write) exists in the code because the value of `input_device->report_desc_size` is directly used as the size argument for `kzalloc` without any validation. If `input_device->report_desc_size` is 0 or a very large value, `kzalloc` may allocate a zero-sized or excessively large buffer, leading to an out-of-bounds write vulnerability when the buffer is accessed later.
+
+Step 2. Fixing Strategy: To fix the vulnerability, we need to ensure that `input_device->report_desc_size` is a valid and reasonable value before calling `kzalloc`. A common strategy is to add a check for the value of `input_device->report_desc_size` and handle the case when it is 0 or an unreasonable value. The patch does this by adding an `if` condition to check if `input_device->report_desc_size` is 0, and if so, it performs a cleanup operation (which is not shown in the provided code snippet). After this check, it is safe to call `kzalloc` with `input_device->report_desc_size` as the size argument.
+
+The reasoning behind the patch is as follows:
+
+1. Check if `input_device->report_desc_size` is 0 or an unreasonable value.
+2. If `input_device->report_desc_size` is 0, perform a cleanup operation and exit the function safely.
+3. If `input_device->report_desc_size` is a valid value, proceed with the `kzalloc` call to allocate the buffer.
+
+By adding this check, the patch ensures that `kzalloc` is called with a valid and reasonable size argument, preventing the out-of-bounds write vulnerability.
